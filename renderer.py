@@ -53,9 +53,11 @@ for y in range(1, height + 1):
         yn = y / height * 2 - 1
         points[i] = (xn, yn, 0, i)
 
-print(points.shape)
-print(points)
-ctx.enable_only(moderngl.PROGRAM_POINT_SIZE)
+ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+ctx.enable(moderngl.DEPTH_TEST)
+ctx.disable(moderngl.BLEND)
+ctx.multisample = False
+
 vbo = ctx.buffer(points.astype('f4').tobytes())
 vao = ctx.simple_vertex_array(prog, vbo, 'vertex_position', 'vertex_index')
 
@@ -63,5 +65,17 @@ fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
 fbo.use()
 fbo.clear(0.0, 0.0, 0.0, 1.0)
 vao.render(mode=moderngl.POINTS, vertices=n_points)
-# note alpha channel not visible in the image
+
+ctx.finish()
+
+rgba: bytes = fbo.read(components=4, alignment=1)
+for x in range(0, 100, 4):
+    r = rgba[x]
+    g = rgba[x + 1]
+    b = rgba[x + 2]
+    a = rgba[x + 3]
+    if r != 0 or g != 0 or b != 0 or a != 0:
+        print(f'{x} {r} {g} {b} {a}')
+
+
 Image.frombytes('RGB', fbo.size, fbo.read(), 'raw', 'RGB', 0, -1).show()
