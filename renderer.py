@@ -6,45 +6,62 @@ ctx = moderngl.create_standalone_context()
 
 prog = ctx.program(
 
+    # inspired by https://github.com/isl-org/Open3D/blob/master/cpp/open3d/visualization/shader/glsl/PickingVertexShader.glsl
     vertex_shader='''
         #version 330
-        in vec3 in_vert;
-        in vec3 in_color;
-        out vec3 v_color;
-        void main() {
-            v_color = in_color;
-            gl_Position = vec4(in_vert, 1.0);
-            gl_PointSize = 10.0;
+
+        in vec3 vertex_position;
+        in float vertex_index;
+        //uniform mat4 MVP;
+
+        out vec4 fragment_color;
+
+        void main()
+        {
+            float r, g, b, a;
+            //gl_Position = MVP * vec4(vertex_position, 1);
+            gl_Position = vec4(vertex_position, 1);
+
+            r = floor(vertex_index / 16777216.0) / 255.0;
+            g = mod(floor(vertex_index / 65536.0), 256.0) / 255.0;
+            b = mod(floor(vertex_index / 256.0), 256.0) / 255.0;
+            a = mod(vertex_index, 256.0) / 255.0;
+            fragment_color = vec4(r, g, b, a);
         }
     ''',
 
     fragment_shader='''
         #version 330
-        in vec3 v_color;
-        out vec3 f_color;
+        in vec4 fragment_color;
+        out vec4 f_color;
         void main() {
-            f_color = v_color;
+            f_color = fragment_color;
         }
     ''',
 
 )
 
-x = np.random.rand(50) - 0.5
-y = np.random.rand(50) - 0.5
-z = np.random.rand(50) - 0.5
-x *= 2.0
-y *= 2.0
-z *= 2.0
-r = np.ones(50)
-g = np.zeros(50)
-b = np.zeros(50)
+width = 1024
+height = 1024
+n_points = width * height
+# for each pixel create a point, with the index encoded in the color
+points = np.zeros((n_points, 4), dtype=np.float32)
+for y in range(1, height + 1):
+    for x in range(1, width + 1):
+        i = (y-1) * width + (x-1)
+        xn = x / width * 2 - 1
+        yn = y / height * 2 - 1
+        points[i] = (xn, yn, 0, i)
 
-vertices = np.dstack([x, y, z, r, g, b])
+print(points.shape)
+print(points)
 ctx.enable_only(moderngl.PROGRAM_POINT_SIZE)
-vbo = ctx.buffer(vertices.astype('f4').tobytes())
-vao = ctx.simple_vertex_array(prog, vbo, 'in_vert', 'in_color')
-fbo = ctx.simple_framebuffer((512, 512))
+vbo = ctx.buffer(points.astype('f4').tobytes())
+vao = ctx.simple_vertex_array(prog, vbo, 'vertex_position', 'vertex_index')
+
+fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
 fbo.use()
 fbo.clear(0.0, 0.0, 0.0, 1.0)
-vao.render(mode=moderngl.POINTS, vertices=50)
+vao.render(mode=moderngl.POINTS, vertices=n_points)
+# note alpha channel not visible in the image
 Image.frombytes('RGB', fbo.size, fbo.read(), 'raw', 'RGB', 0, -1).show()
