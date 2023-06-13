@@ -2,15 +2,14 @@
 
 in vec3 vertex_position;
 in float vertex_index;
-//uniform mat4 MVP;
+uniform mat4 MVP;
 
 out vec4 fragment_color;
 
 void main()
 {
     float r, g, b, a;
-    //gl_Position = MVP * vec4(vertex_position, 1);
-    gl_Position = vec4(vertex_position, 1);
+    gl_Position = MVP * vec4(vertex_position, 1);
 
     r = floor(vertex_index / 16777216.0) / 255.0;
     g = mod(floor(vertex_index / 65536.0), 256.0) / 255.0;
