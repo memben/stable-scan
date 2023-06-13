@@ -12,11 +12,8 @@ def points_to_id(points: np.ndarray, MVP: np.ndarray, width: int, height: int, d
 
 class PointIdRenderer:
     def __init__(self) -> None:
-        vertex_shader = self.read_shader_file('vertex_id_color.vert')
-        fragment_shader = self.read_shader_file('vertex_id_color.frag')
-
         self.context = moderngl.create_standalone_context()
-        self.program = self.context.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
+        self.program = self.context.program(vertex_shader=self.VERTEX_SHADER, fragment_shader=self.FRAGMENT_SHADER)
 
         self.context.enable(moderngl.PROGRAM_POINT_SIZE)
         self.context.enable(moderngl.DEPTH_TEST)
@@ -54,6 +51,34 @@ class PointIdRenderer:
         rgba = np.frombuffer(buffer, dtype=dt).reshape((height, width))
         return rgba
 
-    def read_shader_file(self, filename):
-        with open(filename, 'r') as file:
-            return file.read()
+    VERTEX_SHADER = '''
+    #version 330
+    // inspired by https://github.com/isl-org/Open3D/blob/master/cpp/open3d/visualization/shader/glsl/PickingVertexShader.glsl
+    in vec3 vertex_position;
+    in float vertex_index;
+    uniform mat4 MVP;
+
+    out vec4 fragment_color;
+
+    void main()
+    {
+        float r, g, b, a;
+        gl_Position = MVP * vec4(vertex_position, 1);
+
+        r = mod(vertex_index, 256.0) / 255.0;
+        g = mod(floor(vertex_index / 256.0), 256.0) / 255.0;
+        b = mod(floor(vertex_index / 65536.0), 256.0) / 255.0;
+        a = floor(vertex_index / 16777216.0) / 255.0;
+        fragment_color = vec4(r, g, b, a);
+    }
+    '''
+
+    FRAGMENT_SHADER = '''
+    #version 330
+    in vec4 fragment_color;
+    out vec4 f_color;
+
+    void main() {
+        f_color = fragment_color;
+    }
+    '''

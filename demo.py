@@ -8,7 +8,6 @@ def continues_points_to_id():
     n_points = width * height
     MVP = np.eye(4, dtype=np.float32)
     
-
     points = np.zeros((n_points, 3), dtype=np.float32)
     for y in range(1, height + 1):
         for x in range(1, width + 1):
