@@ -1,13 +1,11 @@
 
 from pathlib import Path
-from pyrr import Matrix44, Vector3
+from moderngl_window.opengl.vao import VAO
 
 import moderngl
 import moderngl_window as mglw
-from moderngl_window.opengl.vao import VAO
 import numpy as np
 import pointcloud
-from moderngl_window import geometry
 from base_viewer import CameraWindow
 
 
@@ -18,14 +16,10 @@ class PointCloudViewer(CameraWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.prog = self.load_program('point_color.glsl')
-        points = np.random.rand(1000, 3).astype(np.float32)
-        colors = np.random.rand(1000, 3).astype(np.float32)
-        self.points = pointcloud.create_pc(points, colors)
-
-    def setup(self, pointcloud: VAO, shader: str='point_color.glsl'):
-        self.prog = self.load_program(shader)
-        self.pointcloud = pointcloud
-
+        # points = np.random.rand(1000, 3).astype(np.float32)
+        # colors = np.random.rand(1000, 3).astype(np.float32)
+        # self.points = pointcloud.create_pc(points, colors)
+        self.points = pointcloud.read_pcd('../room-scan.las')
 
     def render(self, time: float, frametime: float):
         self.ctx.enable_only(moderngl.CULL_FACE | moderngl.DEPTH_TEST | moderngl.PROGRAM_POINT_SIZE)
