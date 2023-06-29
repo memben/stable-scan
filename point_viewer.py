@@ -52,7 +52,7 @@ class PointCloudViewer(CameraWindow):
         elif key == self.wnd.keys.E:
             self.mode = self.DEPTH
             mvp = self.camera.projection.matrix * self.camera.matrix
-            depth_image = pcru.obtain_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True)
+            depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True)
             depth_image.show(title="Filtered Depth Image")
         elif key == self.wnd.keys.C:
             self.mode = self.COLOR
@@ -60,7 +60,8 @@ class PointCloudViewer(CameraWindow):
         elif key == self.wnd.keys.R:
             mvp = self.camera.projection.matrix * self.camera.matrix
             ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            depth_image = pcru.obtain_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
+            screen_image = pcru.create_screen_image(self.ctx.screen)
+            depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
             
             
 if __name__ == '__main__':

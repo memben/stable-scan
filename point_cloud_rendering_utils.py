@@ -65,7 +65,22 @@ def obtain_point_ids(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.
     buffer = fbo.read(components=4, alignment=1)
     return buffer_to_id(buffer, width, height)
 
-def obtain_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> np.ndarray:
+def create_screen_image(source: moderngl.Framebuffer) -> Image:
+    # Taken from the moderngl_window's screenshot function
+    mode = 'RGB'
+    alignment = 1
+    image = Image.frombytes(
+        mode,
+        (
+            source.viewport[2] - source.viewport[0],
+            source.viewport[3] - source.viewport[1],
+        ),
+        source.read(viewport=source.viewport, alignment=alignment),
+    )
+    image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    return image
+
+def create_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> Image:
     """Given the point cloud and the MVP (4x4) matrix, return the numpy array of shape (width, height) 
     where each cell contains the depth of the point that was rendered to that pixel. 
     Note that depth = 0 means that no point was rendered. """
@@ -126,7 +141,7 @@ def test_obtain_depth():
     points = points @ ROTATION_M
     pcd = pointcloud.PointCloud(points)
     ctx = moderngl.create_standalone_context()
-    depth_image = obtain_depth_image(ctx, pcd, MVP, width, height, debug=True)
+    depth_image = create_depth_image(ctx, pcd, MVP, width, height, debug=True)
     depth_image.show()
 
 if __name__ == '__main__':
