@@ -1,17 +1,17 @@
-
 from pathlib import Path
-from moderngl_window.opengl.vao import VAO
-import numpy as np
-from pointcloud import PointCloud
-import moderngl
-import pcd_io
-import moderngl_window as mglw
-import depth_utils
-import point_cloud_rendering_utils as pcru
-import gen_control
-from PIL import Image
-from base_viewer import CameraWindow
 
+import moderngl
+import moderngl_window as mglw
+import numpy as np
+from moderngl_window.opengl.vao import VAO
+from PIL import Image
+
+import depth_utils
+import gen_control
+import pcd_io
+import point_cloud_rendering_utils as pcru
+from base_viewer import CameraWindow
+from pointcloud import PointCloud
 
 
 class PointCloudViewer(CameraWindow):
@@ -22,25 +22,27 @@ class PointCloudViewer(CameraWindow):
     title = "Point Cloud Viewer"
     window_size = (512, 512)
     aspect_ratio = 1.0
-    resource_dir = (Path(__file__).parent / 'shaders').resolve()
+    resource_dir = (Path(__file__).parent / "shaders").resolve()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.mode = self.COLOR
-        self.prog = self.load_program('point_color.glsl')
+        self.prog = self.load_program("point_color.glsl")
         self.fbo = None
         # hard coded for now
-        self.pcd = pcd_io.read_pcd('../room-scan.las')
-     
+        self.pcd = pcd_io.read_pcd("../room-scan.las")
+
     def render(self, time: float, frametime: float):
-        self.ctx.enable_only(moderngl.CULL_FACE | moderngl.DEPTH_TEST | moderngl.PROGRAM_POINT_SIZE)
+        self.ctx.enable_only(
+            moderngl.CULL_FACE | moderngl.DEPTH_TEST | moderngl.PROGRAM_POINT_SIZE
+        )
         projection = self.camera.projection.matrix
         camera_matrix = self.camera.matrix
         mvp = projection * camera_matrix
-        self.prog['mvp'].write(mvp)
-        self.prog['point_size'].value = self.pcd.point_size
+        self.prog["mvp"].write(mvp)
+        self.prog["point_size"].value = self.pcd.point_size
         self.pcd.get_vao().render(self.prog)
-    
+
     def key_event(self, key, action, modifiers):
         super().key_event(key, action, modifiers)
         if action != self.wnd.keys.ACTION_PRESS:
@@ -48,32 +50,52 @@ class PointCloudViewer(CameraWindow):
         if key == self.wnd.keys.I:
             self.mode = self.INDEX
             mvp = self.camera.projection.matrix * self.camera.matrix
-            pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True)
-            self.prog = self.load_program('point_id.glsl')
+            pcru.obtain_point_ids(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True
+            )
+            self.prog = self.load_program("point_id.glsl")
         elif key == self.wnd.keys.E:
             self.mode = self.DEPTH
             mvp = self.camera.projection.matrix * self.camera.matrix
-            depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True)
+            depth_image = pcru.create_depth_image(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True
+            )
             depth_image.show(title="Filtered Depth Image")
         elif key == self.wnd.keys.C:
             self.mode = self.COLOR
-            self.prog = self.load_program('point_color.glsl')
+            self.prog = self.load_program("point_color.glsl")
         elif key == self.wnd.keys.F:
             mvp = self.camera.projection.matrix * self.camera.matrix
-            ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            depth_image_unfiltered = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False)
-            ids, ids_removed = depth_utils.filter_ids(ids, depth_image, depth_image_unfiltered, debug=True)
+            ids = pcru.obtain_point_ids(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
+            )
+            depth_image = pcru.create_depth_image(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
+            )
+            depth_image_unfiltered = pcru.create_depth_image(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False
+            )
+            ids, ids_removed = depth_utils.filter_ids(
+                ids, depth_image, depth_image_unfiltered, debug=True
+            )
             u_ids = np.unique(ids.flatten())
             u_ids = u_ids[u_ids != PointCloud.EMPTY]
             self.pcd.flag(ids_removed)
             self.pcd.filter(set(u_ids) | ids_removed)
         elif key == self.wnd.keys.R:
             mvp = self.camera.projection.matrix * self.camera.matrix
-            ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            screen_image = pcru.create_screen_image(self.ctx.screen, self.wnd.width, self.wnd.height)
-            depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            depth_image_unfiltered = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False)
+            ids = pcru.obtain_point_ids(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
+            )
+            screen_image = pcru.create_screen_image(
+                self.ctx.screen, self.wnd.width, self.wnd.height
+            )
+            depth_image = pcru.create_depth_image(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
+            )
+            depth_image_unfiltered = pcru.create_depth_image(
+                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False
+            )
             ids, _ = depth_utils.filter_ids(ids, depth_image, depth_image_unfiltered)
             result = gen_control.generate_img(screen_image, depth_image)
             if result is None:
@@ -95,7 +117,5 @@ class PointCloudViewer(CameraWindow):
             self.pcd.point_size -= 1.0
 
 
-            
-            
-if __name__ == '__main__':
+if __name__ == "__main__":
     mglw.run_window_config(PointCloudViewer)

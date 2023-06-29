@@ -1,4 +1,5 @@
 import weakref
+
 import moderngl_window as mglw
 from moderngl_window import activate_context, get_local_window_cls
 from moderngl_window.scene.camera import KeyboardCamera
@@ -8,7 +9,9 @@ from moderngl_window.timers.clock import Timer
 class CameraWindow(mglw.WindowConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.camera = KeyboardCamera(self.wnd.keys, aspect_ratio=self.wnd.aspect_ratio, near=0.01, far=10.0)
+        self.camera = KeyboardCamera(
+            self.wnd.keys, aspect_ratio=self.wnd.aspect_ratio, near=0.01, far=10.0
+        )
         self.camera.velocity = 2.0
         self.camera_enabled = True
         return
@@ -46,7 +49,7 @@ class CameraWindow(mglw.WindowConfig):
         )
         window.print_context_info()
         activate_context(window=window)
-        self.timer = Timer() # TODO(memben): Figure out: self.timer or Timer()
+        self.timer = Timer()  # TODO(memben): Figure out: self.timer or Timer()
         config = self(ctx=window.ctx, wnd=window, timer=self.timer)
         # Avoid the event assigning in the property setter for now
         # We want the even assigning to happen in WindowConfig.__init__
@@ -82,11 +85,11 @@ class CameraWindow(mglw.WindowConfig):
         # _, duration = timer.stop()
         # window.destroy()
         # if duration > 0:
-            # logger.info(
-            #     "Duration: {0:.2f}s @ {1:.2f} FPS".format(
-            #         duration, window.frames / duration
-            #     )
-            # )
+        # logger.info(
+        #     "Duration: {0:.2f}s @ {1:.2f} FPS".format(
+        #         duration, window.frames / duration
+        #     )
+        # )
 
     def key_event(self, key, action, modifiers):
         keys = self.wnd.keys
