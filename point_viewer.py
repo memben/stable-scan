@@ -2,12 +2,13 @@
 from pathlib import Path
 from moderngl_window.opengl.vao import VAO
 import numpy as np
-import pointcloud
+from pointcloud import PointCloud
 import moderngl
 import pcd_io
 import moderngl_window as mglw
-import webui_api
+import depth_utils
 import point_cloud_rendering_utils as pcru
+import gen_control
 from PIL import Image
 from base_viewer import CameraWindow
 
@@ -57,14 +58,26 @@ class PointCloudViewer(CameraWindow):
         elif key == self.wnd.keys.C:
             self.mode = self.COLOR
             self.prog = self.load_program('point_color.glsl')
+        elif key == self.wnd.keys.F:
+            mvp = self.camera.projection.matrix * self.camera.matrix
+            ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
+            depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
+            depth_image_unfiltered = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False)
+            ids, ids_removed = depth_utils.filter_ids(ids, depth_image, depth_image_unfiltered, debug=True)
+            u_ids = np.unique(ids.flatten())
+            u_ids = u_ids[u_ids != PointCloud.EMPTY]
+            self.pcd.flag(ids_removed)
+            self.pcd.filter(set(u_ids) | ids_removed)
         elif key == self.wnd.keys.R:
             mvp = self.camera.projection.matrix * self.camera.matrix
             ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
             screen_image = pcru.create_screen_image(self.ctx.screen, self.wnd.width, self.wnd.height)
             depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            screen_image.show(title="Screen Image")
-            depth_image.show(title="Depth Image")
-            result = webui_api.generate_img2img("A modern room", screen_image, depth_image)
+            depth_image_unfiltered = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False)
+            ids, _ = depth_utils.filter_ids(ids, depth_image, depth_image_unfiltered)
+            result = gen_control.generate_img(screen_image, depth_image)
+            if result is None:
+                return
             self.pcd.retexture(result, ids)
             result.save("result.png")
             np.save("ids.npy", ids)

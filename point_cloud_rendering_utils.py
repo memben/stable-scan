@@ -52,7 +52,7 @@ def obtain_point_ids(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.
 
     program['mvp'].write(mvp.astype('f4').tobytes())
     # TODO(memben): Fix distorted point color for values > 1.0
-    program['point_size'].value = 1.0
+    program['point_size'].value = pcd.point_size
 
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
@@ -85,7 +85,7 @@ def create_screen_image(source: moderngl.Framebuffer, width: int, height: int) -
     image = image.resize((width, height), Image.BILINEAR)
     return image
 
-def create_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> Image:
+def create_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, filter: bool = True, debug=False) -> Image:
     """Given the point cloud and the MVP (4x4) matrix, return the numpy array of shape (width, height) 
     where each cell contains the depth of the point that was rendered to that pixel. 
     Note that depth = 0 means that no point was rendered. """
@@ -105,7 +105,7 @@ def create_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: n
     ctx.finish()
     depth_from_dbo = np.frombuffer(tex_depth.read(), dtype=np.dtype('f4')).reshape((width, height)[::-1])
     depth_from_dbo = np.flip(depth_from_dbo, axis=0)
-    return depth_utils.create_depth_image(depth_from_dbo, filter=True)
+    return depth_utils.create_depth_image(depth_from_dbo, filter=filter)
 
 def test_obtain_point_ids():
     width, height = 512, 512

@@ -2,9 +2,12 @@ import moderngl
 import numpy as np
 from PIL import Image
 from moderngl_window.opengl.vao import VAO
+from enum import Enum
 
 class PointCloud:
-    def __init__(self, points: np.ndarray, colors: np.ndarray = None, point_size: float = 3.0) -> None:
+    EMPTY = 2**32 - 1
+
+    def __init__(self, points: np.ndarray, colors: np.ndarray = None, point_size: float = 1.0) -> None:
         # to provide a uniform camera experience
         self.points = normalize(points)
         self.point_size = point_size
@@ -33,6 +36,12 @@ class PointCloud:
         vao.buffer(vbo, '3f', 'in_color')
         return vao
     
+    def flag(self, ids: set) -> None:
+        '''Flag all points with ids in the ids set.'''
+        ids = np.array(list(ids))
+        self.colors[ids] = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+        self.vao = None
+
     def retexture(self, texture: Image, ids: np.ndarray) -> None:
         '''Given a texture and a 2D array of ids, retexture the point cloud.'''
         texture.show()
@@ -41,20 +50,23 @@ class PointCloud:
                 color = texture.getpixel((x, y))
                 color = np.array(color, dtype=np.float32) / 255.0
                 id = ids[y, x]
-                if id == 2**32 - 1: continue
+                if id == PointCloud.EMPTY: continue
                 self.colors[id] = color  
         self.vao = None
     
     def exclusive_retexture(self, texture: Image, ids: np.ndarray) -> None:
         '''Discard all points except those with ids in the ids array.'''
         self.retexture(texture, ids)
-    
         u_ids = np.unique(ids.flatten())
-        u_ids = u_ids[u_ids != 2**32 - 1]
+        u_ids = u_ids[u_ids != PointCloud.EMPTY]
+        self.filter(set(u_ids))
+
+    def filter(self, u_ids: set):
+        '''Discard all points except those with ids in the u_ids set.'''
+        u_ids = np.array(list(u_ids))
         self.points = self.points[u_ids]
         self.colors = self.colors[u_ids]
-
-    
+        self.vao = None
     
 # TODO(memben): Slighly shifts the point cloud one pixel to the bottom and right.
 def normalize(points: np.ndarray) -> np.ndarray:

@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
-from scipy.ndimage import median_filter
+from pointcloud import PointCloud
+from scipy.ndimage import median_filter, gaussian_filter
 
 def create_depth_image(buffer: np.ndarray, filter: bool = False):
     """Converts a depth buffer to a 8-bit depth image, with min and max depth as range. 
@@ -14,6 +15,7 @@ def create_depth_image(buffer: np.ndarray, filter: bool = False):
     if filter:
         fill_zero_pixels(depth_buffer)
         depth_buffer = median_filter(depth_buffer, size=3)
+        depth_buffer = gaussian_filter(depth_buffer, sigma=1) 
 
     depth_buffer[depth_buffer == 1.0] = max_depth
     depth_buffer = np.round((depth_buffer - min_depth) / depth_step, 0).astype(np.uint8)
@@ -33,3 +35,33 @@ def fill_zero_pixels(depth_buffer: np.ndarray):
                 neighborhood = neighborhood[neighborhood < 1.0]
                 if neighborhood.size > 0:
                     depth_buffer[i, j] = np.mean(neighborhood)
+
+def filter_ids(ids: np.ndarray, depth_filtered: Image, depth_unfiltered: Image, deviation: float = 0.05, debug=False) -> np.ndarray:
+    '''Given a 2D array of ids, a depth image, and a depth image without filtering,
+    filter out ids that deviate too much from the filtered depth image.'''
+    ids_filtered = ids.copy()
+    ids_removed = set()
+    if debug:
+        depth_filtered.show(title="Filtered Depth Image")
+        depth_unfiltered.show(title="Unfiltered Depth Image")
+    depth_filtered = np.array(depth_filtered)
+    depth_unfiltered = np.array(depth_unfiltered)
+    filter_mask = np.zeros_like(depth_filtered, dtype=np.uint8)
+    changed = 0
+    for x in range(ids.shape[1]):
+        for y in range(ids.shape[0]):
+            id = ids[y, x]
+            if id ==PointCloud.EMPTY: continue
+            upper = depth_filtered[y, x] * (1 + deviation)
+            lower = depth_filtered[y, x] * (1 - deviation)
+            if depth_unfiltered[y, x] > upper or depth_unfiltered[y, x] < lower:
+                changed += 1
+                filter_mask[y, x] = 255
+                ids_removed.add(id)
+                ids_filtered[y, x] = PointCloud.EMPTY
+    # convert filter mask to image
+    filter_mask = Image.fromarray(filter_mask, mode='L')
+    if debug:
+        filter_mask.show(title="Filter Mask")
+        print(f'Filtered {changed} ids.')
+    return ids_filtered, ids_removed
