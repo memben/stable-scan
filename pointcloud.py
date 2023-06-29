@@ -3,9 +3,10 @@ import numpy as np
 from moderngl_window.opengl.vao import VAO
 
 class PointCloud:
-    def __init__(self, points: np.ndarray, colors: np.ndarray = None) -> None:
+    def __init__(self, points: np.ndarray, colors: np.ndarray = None, point_size: float = 3.0) -> None:
         # to provide a uniform camera experience
         self.points = normalize(points)
+        self.point_size = point_size
         if colors is None:
             points = np.random.rand(1000, 3).astype(np.float32)
             colors = np.random.rand(1000, 3).astype(np.float32)

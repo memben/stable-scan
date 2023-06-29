@@ -36,7 +36,7 @@ class PointCloudViewer(CameraWindow):
         camera_matrix = self.camera.matrix
         mvp = projection * camera_matrix
         self.prog['mvp'].write(mvp)
-        self.prog['point_size'].value = 2.0
+        self.prog['point_size'].value = self.pcd.point_size
         self.pcd.get_vao().render(self.prog)
         
             
@@ -48,24 +48,20 @@ class PointCloudViewer(CameraWindow):
             self.mode = self.INDEX
             mvp = self.camera.projection.matrix * self.camera.matrix
             pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True)
-            # self.prog = self.load_program('point_id.glsl')
-        elif key == self.wnd.keys.R:
+            self.prog = self.load_program('point_id.glsl')
+        elif key == self.wnd.keys.E:
             self.mode = self.DEPTH
-            if self.fbo is None:
-                self.fbo = self.ctx.framebuffer(self.ctx.renderbuffer(self.wnd.size), 
-                                                self.ctx.depth_renderbuffer(self.wnd.size, components=32))
-            self.fbo.use()
-            depth_data = self.fbo.read(components=1, alignment=1)
-            depth_data = np.frombuffer(depth_data, dtype=np.uint8)  # Read as bytes
-            depth_data = depth_data.reshape((self.wnd.height, self.wnd.width, 3))  # Reshape considering 3 bytes per depth value
-
-            # Combine the bytes to get the 24 bit depth values
-            depth_data_24bit = depth_data[:,:,0] + depth_data[:,:,1] * 256 + depth_data[:,:,2] * 256**2
-
-            # Convert the 24 bit depth values to float
-            depth_data_float = depth_data_24bit / (2**24 - 1)  # Normalizing
-            print(depth_data_float)
-
+            mvp = self.camera.projection.matrix * self.camera.matrix
+            depth_image = pcru.obtain_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True)
+            depth_image.show(title="Filtered Depth Image")
+        elif key == self.wnd.keys.C:
+            self.mode = self.COLOR
+            self.prog = self.load_program('point_color.glsl')
+        elif key == self.wnd.keys.R:
+            mvp = self.camera.projection.matrix * self.camera.matrix
+            ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
+            depth_image = pcru.obtain_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
+            
             
 if __name__ == '__main__':
     mglw.run_window_config(PointCloudViewer)

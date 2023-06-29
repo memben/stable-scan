@@ -51,6 +51,8 @@ def obtain_point_ids(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.
     ctx.multisample = False
 
     program['mvp'].write(mvp.astype('f4').tobytes())
+    # TODO(memben): Fix distorted point color for values > 1.0
+    program['point_size'].value = 1.0
 
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
@@ -59,11 +61,11 @@ def obtain_point_ids(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.
     ctx.finish()
     if debug:
         # Alpha channel cannot be displayed
-        Image.frombytes('RGB', fbo.size, fbo.read(), 'raw', 'RGB', 0, -1).show()
+        Image.frombytes('RGB', fbo.size, fbo.read(), 'raw', 'RGB', 0, -1).show(title="Point ID Capture")
     buffer = fbo.read(components=4, alignment=1)
     return buffer_to_id(buffer, width, height)
 
-def obtain_depth(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> np.ndarray:
+def obtain_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> np.ndarray:
     """Given the point cloud and the MVP (4x4) matrix, return the numpy array of shape (width, height) 
     where each cell contains the depth of the point that was rendered to that pixel. 
     Note that depth = 0 means that no point was rendered. """
@@ -73,6 +75,7 @@ def obtain_depth(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndar
     ctx.enable(moderngl.DEPTH_TEST)
 
     program['mvp'].write(mvp.astype('f4').tobytes())
+    program['point_size'].value = pcd.point_size
 
     tex_depth = ctx.depth_texture((width, height))  # implicit -> dtype='f4', components=1
     fbo_depth = ctx.framebuffer(depth_attachment=tex_depth)
@@ -82,12 +85,7 @@ def obtain_depth(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndar
     ctx.finish()
     depth_from_dbo = np.frombuffer(tex_depth.read(), dtype=np.dtype('f4')).reshape((width, height)[::-1])
     depth_from_dbo = np.flip(depth_from_dbo, axis=0)
-    print(depth_from_dbo)
-    print(len(set(depth_from_dbo.flatten())))
-    depth_utils.create_depth_image(depth_from_dbo).show()
-    depth_utils.create_depth_image(depth_from_dbo, filter=True).show()
-
-
+    return depth_utils.create_depth_image(depth_from_dbo, filter=True)
 
 def test_obtain_point_ids():
     width, height = 512, 512
@@ -128,9 +126,9 @@ def test_obtain_depth():
     points = points @ ROTATION_M
     pcd = pointcloud.PointCloud(points)
     ctx = moderngl.create_standalone_context()
-    depth = obtain_depth(ctx, pcd, MVP, width, height, debug=True)
-    print(depth)
+    depth_image = obtain_depth_image(ctx, pcd, MVP, width, height, debug=True)
+    depth_image.show()
 
 if __name__ == '__main__':
-    # test_obtain_point_ids()
+    test_obtain_point_ids()
     test_obtain_depth()

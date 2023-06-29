@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from scipy.ndimage import median_filter
 
 def create_depth_image(buffer: np.ndarray, filter: bool = False):
     """Converts a depth buffer to a 8-bit depth image, with min and max depth as range. 
@@ -11,7 +12,9 @@ def create_depth_image(buffer: np.ndarray, filter: bool = False):
     max_depth = np.max(depth_buffer[depth_buffer < 1.0])
     depth_step = (max_depth - min_depth) / res_per_pixel
     if filter:
-       fill_zero_pixels(depth_buffer)
+        fill_zero_pixels(depth_buffer)
+        depth_buffer = median_filter(depth_buffer, size=3)
+
     depth_buffer[depth_buffer == 1.0] = max_depth
     depth_buffer = np.round((depth_buffer - min_depth) / depth_step, 0).astype(np.uint8)
     depth_buffer = res_per_pixel - depth_buffer
@@ -28,5 +31,5 @@ def fill_zero_pixels(depth_buffer: np.ndarray):
             if depth_buffer[i, j] == 1.0:
                 neighborhood = depth_buffer[max(i - kernel_radius, 0):min(i + kernel_radius + 1, rows), max(j - kernel_radius, 0):min(j + kernel_radius + 1, cols)]
                 neighborhood = neighborhood[neighborhood < 1.0]
-                if neighborhood.size < 1.0:
+                if neighborhood.size > 0:
                     depth_buffer[i, j] = np.mean(neighborhood)
