@@ -9,7 +9,7 @@ class CameraWindow(mglw.WindowConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.camera = KeyboardCamera(self.wnd.keys, aspect_ratio=self.wnd.aspect_ratio, near=0.01, far=10.0)
-        self.camera.velocity = 5.0
+        self.camera.velocity = 2.0
         self.camera_enabled = True
         return
         # inspired by run_window_config

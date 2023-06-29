@@ -1,5 +1,6 @@
 import moderngl
 import numpy as np
+from PIL import Image
 from moderngl_window.opengl.vao import VAO
 
 class PointCloud:
@@ -8,8 +9,7 @@ class PointCloud:
         self.points = normalize(points)
         self.point_size = point_size
         if colors is None:
-            points = np.random.rand(1000, 3).astype(np.float32)
-            colors = np.random.rand(1000, 3).astype(np.float32)
+            colors = np.random.rand(points.shape[0], 3).astype(np.float32)  
         self.colors = colors
         self.vao = None
 
@@ -24,7 +24,6 @@ class PointCloud:
         vbo_colors = ctx.buffer(self.colors.astype('f4').tobytes())
         va = ctx.vertex_array(program, [(vbo_points, '3f', 'in_position'), (vbo_colors, '3f', 'in_color')])
         return va
-        
 
     def create_pc(self) -> VAO:
         vao = VAO(mode=moderngl.POINTS)
@@ -33,6 +32,29 @@ class PointCloud:
         vbo = self.colors.astype('f4').tobytes()
         vao.buffer(vbo, '3f', 'in_color')
         return vao
+    
+    def retexture(self, texture: Image, ids: np.ndarray) -> None:
+        '''Given a texture and a 2D array of ids, retexture the point cloud.'''
+        texture.show()
+        for y in range(texture.height):
+            for x in range(texture.width):
+                color = texture.getpixel((x, y))
+                color = np.array(color, dtype=np.float32) / 255.0
+                id = ids[y, x]
+                if id == 2**32 - 1: continue
+                self.colors[id] = color  
+        self.vao = None
+    
+    def exclusive_retexture(self, texture: Image, ids: np.ndarray) -> None:
+        '''Discard all points except those with ids in the ids array.'''
+        self.retexture(texture, ids)
+    
+        u_ids = np.unique(ids.flatten())
+        u_ids = u_ids[u_ids != 2**32 - 1]
+        self.points = self.points[u_ids]
+        self.colors = self.colors[u_ids]
+
+    
     
 # TODO(memben): Slighly shifts the point cloud one pixel to the bottom and right.
 def normalize(points: np.ndarray) -> np.ndarray:

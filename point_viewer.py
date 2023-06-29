@@ -1,13 +1,14 @@
 
 from pathlib import Path
 from moderngl_window.opengl.vao import VAO
-
+import numpy as np
+import pointcloud
 import moderngl
 import pcd_io
 import moderngl_window as mglw
-import numpy as np
+import webui_api
 import point_cloud_rendering_utils as pcru
-from pointcloud import PointCloud
+from PIL import Image
 from base_viewer import CameraWindow
 
 
@@ -18,8 +19,9 @@ class PointCloudViewer(CameraWindow):
     DEPTH = 2
 
     title = "Point Cloud Viewer"
+    window_size = (512, 512)
+    aspect_ratio = 1.0
     resource_dir = (Path(__file__).parent / 'shaders').resolve()
-    # lock curser to window
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -30,7 +32,6 @@ class PointCloudViewer(CameraWindow):
         self.pcd = pcd_io.read_pcd('../room-scan.las')
      
     def render(self, time: float, frametime: float):
-
         self.ctx.enable_only(moderngl.CULL_FACE | moderngl.DEPTH_TEST | moderngl.PROGRAM_POINT_SIZE)
         projection = self.camera.projection.matrix
         camera_matrix = self.camera.matrix
@@ -38,8 +39,7 @@ class PointCloudViewer(CameraWindow):
         self.prog['mvp'].write(mvp)
         self.prog['point_size'].value = self.pcd.point_size
         self.pcd.get_vao().render(self.prog)
-        
-            
+    
     def key_event(self, key, action, modifiers):
         super().key_event(key, action, modifiers)
         if action != self.wnd.keys.ACTION_PRESS:
@@ -60,8 +60,28 @@ class PointCloudViewer(CameraWindow):
         elif key == self.wnd.keys.R:
             mvp = self.camera.projection.matrix * self.camera.matrix
             ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
-            screen_image = pcru.create_screen_image(self.ctx.screen)
+            screen_image = pcru.create_screen_image(self.ctx.screen, self.wnd.width, self.wnd.height)
             depth_image = pcru.create_depth_image(self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height)
+            screen_image.show(title="Screen Image")
+            depth_image.show(title="Depth Image")
+            result = webui_api.generate_img2img("A modern room", screen_image, depth_image)
+            self.pcd.retexture(result, ids)
+            result.save("result.png")
+            np.save("ids.npy", ids)
+        elif key == self.wnd.keys.M:
+            result = Image.open("result.png")
+            ids = np.load("ids.npy")
+            self.pcd.retexture(result, ids)
+        elif key == self.wnd.keys.X:
+            result = Image.open("result.png")
+            ids = np.load("ids.npy")
+            self.pcd.exclusive_retexture(result, ids)
+        elif key == self.wnd.keys.UP:
+            self.pcd.point_size += 1.0
+        elif key == self.wnd.keys.DOWN:
+            self.pcd.point_size -= 1.0
+
+
             
             
 if __name__ == '__main__':

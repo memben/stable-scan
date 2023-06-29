@@ -32,8 +32,8 @@ def get_program(ctx: moderngl.Context, path: str) -> moderngl.Program:
 # NOTE(memben): having ctx as an argument is a workaround for moderngl_window's context management.
 def obtain_point_ids(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> np.ndarray:
     """Given the point cloud and the MVP (4x4) matrix, return the numpy array of shape (width, height) 
-    where each cell contains the id + 1 of the point that was rendered to that pixel. 
-    Note that id = 0 means that no point was rendered. """
+    where each cell contains the id of the point that was rendered to that pixel. 
+    Note that id = 2*32 - 1 means that no point was rendered. """
     
     def buffer_to_id(buffer: bytes, width: int, height: int) -> np.ndarray:
         # Note: we invert the y axis here
@@ -56,16 +56,19 @@ def obtain_point_ids(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.
 
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
-    fbo.clear(0.0, 0.0, 0.0, 0.0) # set background to black
+    fbo.clear(1.0, 1.0, 1.0, 1.0) # white background
     pcd.get_va_from(ctx, program).render(mode=moderngl.POINTS, vertices=pcd.points.shape[0])
     ctx.finish()
     if debug:
         # Alpha channel cannot be displayed
         Image.frombytes('RGB', fbo.size, fbo.read(), 'raw', 'RGB', 0, -1).show(title="Point ID Capture")
     buffer = fbo.read(components=4, alignment=1)
-    return buffer_to_id(buffer, width, height)
+    ids = buffer_to_id(buffer, width, height)
+    # in OpenGL the origin is at the bottom left corner
+    ids = np.flip(ids, axis=0) 
+    return ids
 
-def create_screen_image(source: moderngl.Framebuffer) -> Image:
+def create_screen_image(source: moderngl.Framebuffer, width: int, height: int) -> Image:
     # Taken from the moderngl_window's screenshot function
     mode = 'RGB'
     alignment = 1
@@ -78,6 +81,8 @@ def create_screen_image(source: moderngl.Framebuffer) -> Image:
         source.read(viewport=source.viewport, alignment=alignment),
     )
     image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    # custom downscale  
+    image = image.resize((width, height), Image.BILINEAR)
     return image
 
 def create_depth_image(ctx: moderngl.Context, pcd: pointcloud.PointCloud, mvp: np.ndarray, width: int, height: int, debug=False) -> Image:
