@@ -42,7 +42,8 @@ def img2img_payload(prompt: str, img: Image, depth: Image):
 
 
 def generate_img2img(prompt: str, img: Image, depth: Image):
-    """Generates an image from a prompt, rgb image, and depth image using StableDiffusion 1.5 and ControlNet 1.1."""
+    """Generates an image from a prompt, rgb image, and depth image
+    using StableDiffusion 1.5 and ControlNet 1.1."""
     payload = img2img_payload(prompt, img, depth)
     response = requests.post(url=f"{url}/sdapi/v1/img2img", json=payload)
     r = response.json()

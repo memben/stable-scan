@@ -47,13 +47,13 @@ def filter_ids(
     ids: np.ndarray,
     depth_filtered: Image,
     depth_unfiltered: Image,
-    deviation: float = 0.05,
+    deviation: float = 0.1,
     debug=False,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """Given a 2D array of ids, a depth image, and a depth image without filtering,
     filter out ids that deviate too much from the filtered depth image."""
     ids_filtered = ids.copy()
-    ids_removed = set()
+    ids_removed = ids.copy()
     if debug:
         depth_filtered.show(title="Filtered Depth Image")
         depth_unfiltered.show(title="Unfiltered Depth Image")
@@ -71,8 +71,9 @@ def filter_ids(
             if depth_unfiltered[y, x] > upper or depth_unfiltered[y, x] < lower:
                 changed += 1
                 filter_mask[y, x] = 255
-                ids_removed.add(id)
                 ids_filtered[y, x] = PointCloud.EMPTY
+            else:
+                ids_removed[y, x] = PointCloud.EMPTY
     # convert filter mask to image
     filter_mask = Image.fromarray(filter_mask, mode="L")
     if debug:

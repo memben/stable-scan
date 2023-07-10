@@ -1,5 +1,3 @@
-from enum import Enum
-
 import moderngl
 import numpy as np
 from moderngl_window.opengl.vao import VAO
@@ -13,46 +11,48 @@ class PointCloud:
         self, points: np.ndarray, colors: np.ndarray = None, point_size: float = 1.0
     ) -> None:
         # to provide a uniform camera experience
-        self.points = normalize(points)
-        self.point_size = point_size
+        self._points = normalize(points)
+        self._point_size = point_size
         if colors is None:
             colors = np.random.rand(points.shape[0], 3).astype(np.float32)
         self.colors = colors
         self.vao = None
 
+    @property
+    def point_size(self) -> float:
+        return self._point_size
+
     def get_vao(self) -> VAO:
         if self.vao is None:
-            self.vao = self.create_pc()
+            self.vao = self._create_pc()
         return self.vao
 
     def get_va_from(
         self, ctx: moderngl.Context, program: moderngl.Program
     ) -> moderngl.VertexArray:
         """Create a vertex array from the points and colors."""
-        vbo_points = ctx.buffer(self.points.astype("f4").tobytes())
+        vbo_points = ctx.buffer(self._points.astype("f4").tobytes())
         vbo_colors = ctx.buffer(self.colors.astype("f4").tobytes())
         va = ctx.vertex_array(
             program, [(vbo_points, "3f", "in_position"), (vbo_colors, "3f", "in_color")]
         )
         return va
 
-    def create_pc(self) -> VAO:
+    def _create_pc(self) -> VAO:
         vao = VAO(mode=moderngl.POINTS)
-        vbo = self.points.astype("f4").tobytes()
+        vbo = self._points.astype("f4").tobytes()
         vao.buffer(vbo, "3f", "in_position")
         vbo = self.colors.astype("f4").tobytes()
         vao.buffer(vbo, "3f", "in_color")
         return vao
 
-    def flag(self, ids: set) -> None:
+    def flag(self, ids: np.array) -> None:
         """Flag all points with ids in the ids set."""
-        ids = np.array(list(ids))
         self.colors[ids] = np.array([1.0, 0.0, 0.0], dtype=np.float32)
         self.vao = None
 
     def retexture(self, texture: Image, ids: np.ndarray) -> None:
         """Given a texture and a 2D array of ids, retexture the point cloud."""
-        texture.show()
         for y in range(texture.height):
             for x in range(texture.width):
                 color = texture.getpixel((x, y))
@@ -63,17 +63,9 @@ class PointCloud:
                 self.colors[id] = color
         self.vao = None
 
-    def exclusive_retexture(self, texture: Image, ids: np.ndarray) -> None:
+    def filter(self, u_ids: np.array) -> None:
         """Discard all points except those with ids in the ids array."""
-        self.retexture(texture, ids)
-        u_ids = np.unique(ids.flatten())
-        u_ids = u_ids[u_ids != PointCloud.EMPTY]
-        self.filter(set(u_ids))
-
-    def filter(self, u_ids: set):
-        """Discard all points except those with ids in the u_ids set."""
-        u_ids = np.array(list(u_ids))
-        self.points = self.points[u_ids]
+        self._points = self._points[u_ids]
         self.colors = self.colors[u_ids]
         self.vao = None
 
@@ -86,3 +78,10 @@ def normalize(points: np.ndarray) -> np.ndarray:
     scaling_factor = 2.0 / np.max(ranges)
     normalized_points = (points - min_coords) * scaling_factor - 1.0
     return normalized_points
+
+
+def flatten_and_filter(ids: np.ndarray) -> np.ndarray:
+    """Given a 2D array of ids, flatten it and remove all empty ids."""
+    ids = ids.flatten()
+    ids = ids[ids != PointCloud.EMPTY]
+    return ids

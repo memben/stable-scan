@@ -8,7 +8,7 @@ import depth_utils
 import pointcloud
 
 
-def inject_string(shader_code, injection):
+def inject_definition(shader_code, injection):
     # "#version xxx" must be the first line
     lines = shader_code.split("\n")
     index = 0
@@ -27,8 +27,8 @@ def get_program(ctx: moderngl.Context, path: str) -> moderngl.Program:
     with shader_file_path.open("r") as shader_file:
         shader_source = shader_file.read()
     program = ctx.program(
-        vertex_shader=inject_string(shader_source, "#define VERTEX_SHADER"),
-        fragment_shader=inject_string(shader_source, "#define FRAGMENT_SHADER"),
+        vertex_shader=inject_definition(shader_source, "#define VERTEX_SHADER"),
+        fragment_shader=inject_definition(shader_source, "#define FRAGMENT_SHADER"),
     )
     return program
 
@@ -47,7 +47,6 @@ def obtain_point_ids(
     Note that id = 2*32 - 1 means that no point was rendered."""
 
     def buffer_to_id(buffer: bytes, width: int, height: int) -> np.ndarray:
-        # Note: we invert the y axis here
         dt = np.dtype(np.uint32)
         # Little endian
         dt = dt.newbyteorder("<")
@@ -63,13 +62,13 @@ def obtain_point_ids(
 
     program["mvp"].write(mvp.astype("f4").tobytes())
     # TODO(memben): Fix distorted point color for values > 1.0
-    program["point_size"].value = pcd.point_size
+    program["point_size"].value = pcd._point_size
 
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
     fbo.clear(1.0, 1.0, 1.0, 1.0)  # white background
     pcd.get_va_from(ctx, program).render(
-        mode=moderngl.POINTS, vertices=pcd.points.shape[0]
+        mode=moderngl.POINTS, vertices=pcd._points.shape[0]
     )
     ctx.finish()
     if debug:
@@ -120,7 +119,7 @@ def create_depth_image(
     ctx.enable(moderngl.DEPTH_TEST)
 
     program["mvp"].write(mvp.astype("f4").tobytes())
-    program["point_size"].value = pcd.point_size
+    program["point_size"].value = pcd._point_size
 
     tex_depth = ctx.depth_texture(
         (width, height)
@@ -129,7 +128,7 @@ def create_depth_image(
     fbo_depth.use()
     fbo_depth.clear(depth=1.0)
     pcd.get_va_from(ctx, program).render(
-        mode=moderngl.POINTS, vertices=pcd.points.shape[0]
+        mode=moderngl.POINTS, vertices=pcd._points.shape[0]
     )
     ctx.finish()
     depth_from_dbo = np.frombuffer(tex_depth.read(), dtype=np.dtype("f4")).reshape(
