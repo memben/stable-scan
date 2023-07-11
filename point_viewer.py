@@ -14,18 +14,18 @@ from base_viewer import CameraWindow
 
 
 class PointCloudViewer(CameraWindow):
-    title = "Point Cloud Viewer"
-    window_size = (512, 512)
-    aspect_ratio = 1.0
     resource_dir = (Path(__file__).parent / "shaders").resolve()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.wnd.mouse_exclusivity = True
+        # self.wnd.mouse_exclusivity = True
         self.prog = self.load_program("point_color.glsl")
         self.fbo = None
         # hard coded for now
         self.pcd = pcd_io.read_pcd("../room-scan.las")
+
+    def add_geometry(self, pcd: pointcloud.PointCloud):
+        self.pcd = pcd
 
     def render(self, time: float, frametime: float):
         self.ctx.enable_only(
@@ -125,5 +125,5 @@ class PointCloudViewer(CameraWindow):
 
 
 if __name__ == "__main__":
-    app = PointCloudViewer()
+    app = PointCloudViewer(size=(768, 512))
     app.run()

@@ -4,7 +4,7 @@ from typing import List
 
 import moderngl
 import moderngl_window
-from moderngl_window import WindowConfig, resources
+from moderngl_window import resources
 from moderngl_window.conf import settings
 from moderngl_window.meta import ProgramDescription
 from moderngl_window.scene.camera import KeyboardCamera
@@ -15,10 +15,13 @@ class CustomSetup():
     """
     Custom setup for moderngl_window, based on the custom example setup and WindowConfig
     """
-    def __init__(self):
-        settings.WINDOW['title'] = self.title or "Custom Viewer"
-        settings.WINDOW['size'] = self.window_size or (1024, 1024)
-        settings.WINDOW['aspect_ratio'] = self.aspect_ratio or 1.0
+    def __init__(self, **kwargs):
+        self.title = kwargs.get('title', "Custom Viewer")
+        self.window_size = kwargs.get('size', (512, 512))
+        self.aspect_ratio = self.window_size[0] / self.window_size[1]
+        settings.WINDOW['title'] = self.title
+        settings.WINDOW['size'] = self.window_size
+        settings.WINDOW['aspect_ratio'] = self.aspect_ratio
 
         if self.resource_dir:
             resources.register_dir(Path(self.resource_dir).resolve())
@@ -50,12 +53,15 @@ class CustomSetup():
         timer.start()
 
         while not self.wnd.is_closing:
-            self.wnd.clear()
-            time, frame_time = timer.next_frame()
-            self.render(time, frame_time)
-            self.wnd.swap_buffers()
+            self.step(timer)
 
         self.wnd.destroy()
+
+    def step(self, timer):
+        self.wnd.clear()
+        time, frame_time = timer.next_frame()
+        self.render(time, frame_time)
+        self.wnd.swap_buffers()
 
     def resize(self, width: int, height: int):
         print("Window was resized. buffer size is {} x {}".format(width, height))
@@ -66,19 +72,6 @@ class CustomSetup():
 
     def key_event(self, key, action, modifiers):
         print("Key:", key, "action:", action, "modifiers:", modifiers)
-            # toggle cursor
-            # if key == keys.C:
-            #     self.wnd.cursor = not self.wnd.cursor
-
-            # # Shuffle window tittle
-            # if key == keys.T:
-            #     title = list(self.wnd.title)
-            #     random.shuffle(title)
-            #     self.wnd.title = ''.join(title)
-
-            # # Toggle mouse exclusivity
-            # if key == keys.M:
-            #     self.wnd.mouse_exclusivity = not self.wnd.mouse_exclusivity
 
     def mouse_position_event(self, x, y, dx, dy):
         print("Mouse position pos={} {} delta={} {}".format(x, y, dx, dy))
