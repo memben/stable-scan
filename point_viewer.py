@@ -21,6 +21,7 @@ class PointCloudViewer(CameraWindow):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.wnd.mouse_exclusivity = True
         self.prog = self.load_program("point_color.glsl")
         self.fbo = None
         # hard coded for now
@@ -124,4 +125,5 @@ class PointCloudViewer(CameraWindow):
 
 
 if __name__ == "__main__":
-    mglw.run_window_config(PointCloudViewer)
+    app = PointCloudViewer()
+    app.run()

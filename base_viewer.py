@@ -1,12 +1,135 @@
-import weakref
+import math
+from pathlib import Path
+from typing import List
 
-import moderngl_window as mglw
-from moderngl_window import activate_context, get_local_window_cls
+import moderngl
+import moderngl_window
+from moderngl_window import WindowConfig, resources
+from moderngl_window.conf import settings
+from moderngl_window.meta import ProgramDescription
 from moderngl_window.scene.camera import KeyboardCamera
 from moderngl_window.timers.clock import Timer
 
 
-class CameraWindow(mglw.WindowConfig):
+class CustomSetup():
+    """
+    Custom setup for moderngl_window, based on the custom example setup and WindowConfig
+    """
+    def __init__(self):
+        settings.WINDOW['title'] = self.title or "Custom Viewer"
+        settings.WINDOW['size'] = self.window_size or (1024, 1024)
+        settings.WINDOW['aspect_ratio'] = self.aspect_ratio or 1.0
+
+        if self.resource_dir:
+            resources.register_dir(Path(self.resource_dir).resolve())
+
+        self.wnd = moderngl_window.create_window_from_settings()
+        self.ctx = self.wnd.ctx
+
+        # register event methods
+        self.wnd.resize_func = self.resize
+        self.wnd.iconify_func = self.iconify
+        self.wnd.key_event_func = self.key_event
+        self.wnd.mouse_position_event_func = self.mouse_position_event
+        self.wnd.mouse_drag_event_func = self.mouse_drag_event
+        self.wnd.mouse_scroll_event_func = self.mouse_scroll_event
+        self.wnd.mouse_press_event_func = self.mouse_press_event
+        self.wnd.mouse_release_event_func = self.mouse_release_event
+        self.wnd.unicode_char_entered_func = self.unicode_char_entered
+        self.wnd.close_func = self.close
+
+    def render(self, time, frame_time):
+        self.ctx.clear(
+            (math.sin(time) + 1.0) / 2,
+            (math.sin(time + 2) + 1.0) / 2,
+            (math.sin(time + 3) + 1.0) / 2,
+        )
+
+    def run(self):
+        timer = Timer()
+        timer.start()
+
+        while not self.wnd.is_closing:
+            self.wnd.clear()
+            time, frame_time = timer.next_frame()
+            self.render(time, frame_time)
+            self.wnd.swap_buffers()
+
+        self.wnd.destroy()
+
+    def resize(self, width: int, height: int):
+        print("Window was resized. buffer size is {} x {}".format(width, height))
+
+    def iconify(self, iconify: bool):
+        """Window hide/minimize and restore"""
+        print("Window was iconified:", iconify)
+
+    def key_event(self, key, action, modifiers):
+        print("Key:", key, "action:", action, "modifiers:", modifiers)
+            # toggle cursor
+            # if key == keys.C:
+            #     self.wnd.cursor = not self.wnd.cursor
+
+            # # Shuffle window tittle
+            # if key == keys.T:
+            #     title = list(self.wnd.title)
+            #     random.shuffle(title)
+            #     self.wnd.title = ''.join(title)
+
+            # # Toggle mouse exclusivity
+            # if key == keys.M:
+            #     self.wnd.mouse_exclusivity = not self.wnd.mouse_exclusivity
+
+    def mouse_position_event(self, x, y, dx, dy):
+        print("Mouse position pos={} {} delta={} {}".format(x, y, dx, dy))
+
+    def mouse_drag_event(self, x, y, dx, dy):
+        print("Mouse drag pos={} {} delta={} {}".format(x, y, dx, dy))
+
+    def mouse_scroll_event(self, x_offset, y_offset):
+        print("mouse_scroll_event", x_offset, y_offset)
+
+    def mouse_press_event(self, x, y, button):
+        print("Mouse button {} pressed at {}, {}".format(button, x, y))
+        print("Mouse states:", self.wnd.mouse_states)
+
+    def mouse_release_event(self, x: int, y: int, button: int):
+        print("Mouse button {} released at {}, {}".format(button, x, y))
+        print("Mouse states:", self.wnd.mouse_states)
+
+    def unicode_char_entered(self, char):
+        print("unicode_char_entered:", char)
+
+    def close(self):
+        print("Window was closed")
+
+    def load_program(
+        self,
+        path=None,
+        vertex_shader=None,
+        geometry_shader=None,
+        fragment_shader=None,
+        tess_control_shader=None,
+        tess_evaluation_shader=None,
+        defines: dict = None,
+        varyings: List[str] = None,
+    ) -> moderngl.Program:
+        """Equals WindowConfig.load_program"""
+        return resources.programs.load(
+            ProgramDescription(
+                path=path,
+                vertex_shader=vertex_shader,
+                geometry_shader=geometry_shader,
+                fragment_shader=fragment_shader,
+                tess_control_shader=tess_control_shader,
+                tess_evaluation_shader=tess_evaluation_shader,
+                defines=defines,
+                varyings=varyings,
+            )
+        )
+
+
+class CameraWindow(CustomSetup):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.camera = KeyboardCamera(
@@ -14,82 +137,6 @@ class CameraWindow(mglw.WindowConfig):
         )
         self.camera.velocity = 2.0
         self.camera_enabled = True
-        return
-        # inspired by run_window_config
-        # custom init code
-        mglw.setup_basic_logging(self.log_level)
-        parser = mglw.create_parser()
-        self.add_arguments(parser)
-        values = mglw.parse_args(args=kwargs, parser=parser)
-        self.argv = values
-        window_cls = get_local_window_cls(values.window)
-
-        # Calculate window size
-        size = values.size or self.window_size
-        size = int(size[0] * values.size_mult), int(size[1] * values.size_mult)
-
-        # Resolve cursor
-        show_cursor = values.cursor
-        if show_cursor is None:
-            show_cursor = self.cursor
-
-        window = window_cls(
-            title=self.title,
-            size=size,
-            fullscreen=self.fullscreen or values.fullscreen,
-            resizable=values.resizable
-            if values.resizable is not None
-            else self.resizable,
-            gl_version=self.gl_version,
-            aspect_ratio=self.aspect_ratio,
-            vsync=values.vsync if values.vsync is not None else self.vsync,
-            samples=values.samples if values.samples is not None else self.samples,
-            cursor=show_cursor if show_cursor is not None else True,
-            backend=values.backend,
-        )
-        window.print_context_info()
-        activate_context(window=window)
-        self.timer = Timer()  # TODO(memben): Figure out: self.timer or Timer()
-        config = self(ctx=window.ctx, wnd=window, timer=self.timer)
-        # Avoid the event assigning in the property setter for now
-        # We want the even assigning to happen in WindowConfig.__init__
-        # so users are free to assign them in their own __init__.
-        window._config = weakref.ref(config)
-
-        # Swap buffers once before staring the main loop.
-        # This can trigged additional resize events reporting
-        # a more accurate buffer size
-        window.swap_buffers()
-        window.set_default_viewport()
-
-        self.timer.start()
-
-    # Custom run code for now
-    def run(self):
-        return ValueError("Note implemented yet")
-        window = mglw.window()
-        self.timer = window.timer
-        while not window.is_closing:
-            current_time, delta = self.timer.next_frame()
-
-            # if config.clear_color is not None:
-            #     window.clear(*config.clear_color)
-
-            # Always bind the window framebuffer before calling render
-            window.use()
-
-            window.render(current_time, delta)
-            if not window.is_closing:
-                window.swap_buffers()
-
-        # _, duration = timer.stop()
-        # window.destroy()
-        # if duration > 0:
-        # logger.info(
-        #     "Duration: {0:.2f}s @ {1:.2f} FPS".format(
-        #         duration, window.frames / duration
-        #     )
-        # )
 
     def key_event(self, key, action, modifiers):
         keys = self.wnd.keys
@@ -111,3 +158,7 @@ class CameraWindow(mglw.WindowConfig):
 
     def resize(self, width: int, height: int):
         self.camera.projection.update(aspect_ratio=self.wnd.aspect_ratio)
+
+if __name__ == '__main__':
+    app = CameraWindow()
+    app.run()
