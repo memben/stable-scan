@@ -6,8 +6,6 @@ import numpy as np
 from PIL import Image
 
 import depth_utils
-import gen_control
-import pcd_io
 import point_cloud_rendering_utils as pcru
 import pointcloud
 from base_viewer import CameraWindow
@@ -16,16 +14,20 @@ from base_viewer import CameraWindow
 class PointCloudViewer(CameraWindow):
     resource_dir = (Path(__file__).parent / "shaders").resolve()
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        pcd: pointcloud.PointCloud,
+        retexture_callback: callable,
+        debug: bool = False,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         # self.wnd.mouse_exclusivity = True
+        self.pcd = pcd
+        self._retexture_callback = retexture_callback
+        self.debug = debug
         self.prog = self.load_program("point_color.glsl")
         self.fbo = None
-        # hard coded for now
-        self.pcd = pcd_io.read_pcd("../room-scan.las")
-
-    def add_geometry(self, pcd: pointcloud.PointCloud):
-        self.pcd = pcd
 
     def render(self, time: float, frametime: float):
         self.ctx.enable_only(
@@ -58,6 +60,7 @@ class PointCloudViewer(CameraWindow):
         super().key_event(key, action, modifiers)
         if action != self.wnd.keys.ACTION_PRESS:
             return
+
         # Retexture the point cloud
         if key == self.wnd.keys.R:
             (
@@ -67,12 +70,13 @@ class PointCloudViewer(CameraWindow):
                 depth_image_unfiltered,
             ) = self._process_screen()
             ids, _ = depth_utils.filter_ids(ids, depth_image, depth_image_unfiltered)
-            result = gen_control.generate_img(screen_image, depth_image)
-            if result is None:
-                return
-            self.pcd.retexture(result, ids)
-            result.save("result.png")
-            np.save("ids.npy", ids)
+
+            from view_control import ScreenCapture
+
+            self._retexture_callback(
+                ScreenCapture(screen_image, depth_image, ids), self.pcd
+            )
+
         # Show the indices of the points
         elif key == self.wnd.keys.I:
             mvp = self.camera.projection.matrix * self.camera.matrix
@@ -80,17 +84,7 @@ class PointCloudViewer(CameraWindow):
                 self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True
             )
             self.prog = self.load_program("point_id.glsl")
-        # Show the depth image
-        elif key == self.wnd.keys.E:
-            mvp = self.camera.projection.matrix * self.camera.matrix
-            depth_image = pcru.create_depth_image(
-                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
-            )
-            depth_image_unfiltered = pcru.create_depth_image(
-                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False
-            )
-            depth_image.show(title="Filtered Depth Image")
-            depth_image_unfiltered.show(title="Unfiltered Depth Image")
+
         # Show the effect of the applied filters, red are the points that were removed
         elif key == self.wnd.keys.F:
             (
@@ -99,6 +93,8 @@ class PointCloudViewer(CameraWindow):
                 depth_image,
                 depth_image_unfiltered,
             ) = self._process_screen()
+            depth_image.show(title="Filtered Depth Image")
+            depth_image_unfiltered.show(title="Unfiltered Depth Image")
             ids, ids_removed = depth_utils.filter_ids(
                 ids, depth_image, depth_image_unfiltered, debug=True
             )

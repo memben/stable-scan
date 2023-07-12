@@ -11,17 +11,18 @@ from moderngl_window.scene.camera import KeyboardCamera
 from moderngl_window.timers.clock import Timer
 
 
-class CustomSetup():
+class CustomSetup:
     """
     Custom setup for moderngl_window, based on the custom example setup and WindowConfig
     """
+
     def __init__(self, **kwargs):
-        self.title = kwargs.get('title', "Custom Viewer")
-        self.window_size = kwargs.get('size', (512, 512))
+        self.title = kwargs.get("title", "Custom Viewer")
+        self.window_size = kwargs.get("size", (512, 512))
         self.aspect_ratio = self.window_size[0] / self.window_size[1]
-        settings.WINDOW['title'] = self.title
-        settings.WINDOW['size'] = self.window_size
-        settings.WINDOW['aspect_ratio'] = self.aspect_ratio
+        settings.WINDOW["title"] = self.title
+        settings.WINDOW["size"] = self.window_size
+        settings.WINDOW["aspect_ratio"] = self.aspect_ratio
 
         if self.resource_dir:
             resources.register_dir(Path(self.resource_dir).resolve())
@@ -152,6 +153,7 @@ class CameraWindow(CustomSetup):
     def resize(self, width: int, height: int):
         self.camera.projection.update(aspect_ratio=self.wnd.aspect_ratio)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app = CameraWindow()
     app.run()
