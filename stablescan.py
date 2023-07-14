@@ -1,5 +1,6 @@
 import fire
 
+from gen_control import SDParams, generate
 from pcd_io import read_pcd
 from pointcloud import PointCloud
 from view_control import ScreenCapture, ViewControl
@@ -90,6 +91,7 @@ class StableScan:
         debug: bool = False,
     ):
         self.pcd = read_pcd(*filenames)
+        self.default_prompt = None
 
         def retexture(screen_capture: ScreenCapture, pcd: PointCloud):
             screen_capture.color_image.show()
@@ -100,13 +102,21 @@ class StableScan:
                 print("Cancelled")
                 return
 
+            prompt = self.default_prompt
             if prompt is None:
                 prompt = input("Enter prompt: ")
 
             print(f"Generating {prompt}...")
 
-            # TODO(memben): Implement webui_api
-            return None
+            img = generate(
+                webui_api,
+                SDParams(
+                    prompt,
+                    init_image=screen_capture.color_image,
+                    controlnet={"depth": screen_capture.depth_image},
+                ),
+            )
+            img.show()
 
         self.vc = ViewControl(self.pcd, width, height, retexture, debug)
         self.vc.run()

@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from PIL import Image
-
-import webui_api
 
 
 @dataclass
@@ -11,15 +9,30 @@ class SDParams:
     """StableDiffusion parameters"""
 
     prompt: str
-    init_images: List[str]
+    init_image: Image = None
     negative_prompt: str = ""
     width: int = 512
     height: int = 512
-    batch_size: int = 1
     steps: int = 20
     cfg_scale: int = 7
     controlnet: Optional[Dict] = None
 
 
-class GenControl:
-    """Controls the generation of images with StableDiffusion"""
+def generate(webui_url: str, params: SDParams) -> Image:
+    """Generate an image using the webui api, uses init_image if provided"""
+    import webui_api
+
+    use_img2img = params.init_image is not None
+    payload = (
+        webui_api.img2img_payload(params)
+        if use_img2img
+        else webui_api.txt2img_payload(params)
+    )
+    if params.controlnet is not None:
+        payload = webui_api.inject_controlnet_payload(payload, params)
+
+    return (
+        webui_api.generate_img2img(webui_url, payload)
+        if use_img2img
+        else webui_api.generate_txt2img(webui_url, payload)
+    )

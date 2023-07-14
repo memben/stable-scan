@@ -9,11 +9,13 @@ from PIL import Image
 from point_viewer import PointCloudViewer
 from pointcloud import PointCloud
 
+
 @dataclass
 class ScreenCapture:
     color_image: Image
     depth_image: Image
     ids: np.ndarray
+
 
 class ViewControl:
     """Controls a moderngl_window viewer"""
