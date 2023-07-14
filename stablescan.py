@@ -2,7 +2,7 @@ import fire
 
 from gen_control import SDParams, generate
 from pcd_io import read_pcd
-from pointcloud import PointCloud
+from pointcloud import SDPointCloud
 from view_control import ScreenCapture, ViewControl
 
 # best performant image size for SD
@@ -63,7 +63,9 @@ class StableScanCLI:
         Extending the capabilities of the control mode.
         Press 'i' to show the indices of the points.
         Press 'f' to show the depth images, filtered and unfiltered, and the effect of the applied filters.
+        Press 'l' to load precomputed textures and apply it to the pointcloud.
         Press 'x' to show the texture applied to the point cloud without the untexured points.
+        Press 'n' to reset the point cloud to its original state.
 
 
         Args:
@@ -90,10 +92,10 @@ class StableScan:
         height: int,
         debug: bool = False,
     ):
-        self.pcd = read_pcd(*filenames)
+        self.pcd = SDPointCloud(read_pcd(*filenames))
         self.default_prompt = None
 
-        def retexture(screen_capture: ScreenCapture, pcd: PointCloud):
+        def retexture(screen_capture: ScreenCapture, pcd: SDPointCloud):
             screen_capture.color_image.show()
             screen_capture.depth_image.show()
 
@@ -116,6 +118,8 @@ class StableScan:
                     controlnet={"depth": screen_capture.depth_image},
                 ),
             )
+
+            pcd.retexture(img, screen_capture.ids)
             img.show()
 
         self.vc = ViewControl(self.pcd, width, height, retexture, debug)

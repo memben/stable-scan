@@ -15,7 +15,7 @@ class PointCloud:
         self._point_size = point_size
         if colors is None:
             colors = np.random.rand(points.shape[0], 3).astype(np.float32)
-        self.colors = colors
+        self._colors = colors
         self.vao = None
 
     @property
@@ -32,7 +32,7 @@ class PointCloud:
     ) -> moderngl.VertexArray:
         """Create a vertex array from the points and colors."""
         vbo_points = ctx.buffer(self._points.astype("f4").tobytes())
-        vbo_colors = ctx.buffer(self.colors.astype("f4").tobytes())
+        vbo_colors = ctx.buffer(self._colors.astype("f4").tobytes())
         va = ctx.vertex_array(
             program, [(vbo_points, "3f", "in_position"), (vbo_colors, "3f", "in_color")]
         )
@@ -42,32 +42,66 @@ class PointCloud:
         vao = VAO(mode=moderngl.POINTS)
         vbo = self._points.astype("f4").tobytes()
         vao.buffer(vbo, "3f", "in_position")
-        vbo = self.colors.astype("f4").tobytes()
+        vbo = self._colors.astype("f4").tobytes()
         vao.buffer(vbo, "3f", "in_color")
         return vao
 
-    def flag(self, ids: np.array) -> None:
-        """Flag all points with ids in the ids set."""
-        self.colors[ids] = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    def set_color(self, ids: np.array, colors: np.array) -> None:
+        """Set the color of all points with ids in the ids set."""
+        self._colors[ids] = colors
         self.vao = None
 
-    def retexture(self, texture: Image, ids: np.ndarray) -> None:
-        """Given a texture and a 2D array of ids, retexture the point cloud."""
-        for y in range(texture.height):
-            for x in range(texture.width):
-                color = texture.getpixel((x, y))
-                color = np.array(color, dtype=np.float32) / 255.0
-                id = ids[y, x]
-                if id == PointCloud.EMPTY:
-                    continue
-                self.colors[id] = color
+    def set_pcd(self, points: np.ndarray, colors: np.ndarray):
+        self._points = normalize(points)
+        self._colors = colors
         self.vao = None
 
     def filter(self, u_ids: np.array) -> None:
         """Discard all points except those with ids in the ids array."""
         self._points = self._points[u_ids]
-        self.colors = self.colors[u_ids]
+        self._colors = self._colors[u_ids]
         self.vao = None
+        print(self.vao)
+
+
+class SDPointCloud:
+    """A point cloud wrapper that provides additional retexturing functionality for StableScan."""
+
+    def __init__(self, pcd: PointCloud) -> None:
+        self.original_points = pcd._points.copy()
+        self.original_colors = pcd._colors.copy()
+        self.pcd = pcd
+
+    def retexture(self, texture: Image, ids: np.ndarray) -> None:
+        """Given a texture and a 2D array of ids, retexture the point cloud."""
+        assert texture.width == ids.shape[1]
+        assert texture.height == ids.shape[0]
+        retexture_ids = []
+        retexture_colors = []
+        for y in range(texture.height):
+            for x in range(texture.width):
+                if id == PointCloud.EMPTY:
+                    continue
+                color = texture.getpixel((x, y))
+                color = np.array(color, dtype=np.float32) / 255.0
+                id = ids[y, x]
+                retexture_ids.append(id)
+                retexture_colors.append(color)
+        retexture_ids = np.array(retexture_ids)
+        retexture_colors = np.array(retexture_colors)
+        self.pcd.set_color(retexture_ids, retexture_colors)
+
+    def flag(self, ids: np.ndarray) -> None:
+        """Flag all points with ids in the ids set."""
+        self.pcd.set_color(ids, np.array([1.0, 0.0, 0.0], dtype=np.float32))
+
+    def filter(self, ids: np.ndarray) -> None:
+        """Discard all points except those with ids in the ids array."""
+        self.pcd.filter(ids)
+
+    def reset(self) -> None:
+        """Reset the point cloud to its original state."""
+        self.pcd.set_pcd(self.original_points.copy(), self.original_colors.copy())
 
 
 # TODO(memben): Slighly shifts the point cloud one pixel to the bottom and right.

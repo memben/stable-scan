@@ -18,6 +18,7 @@ class PointCloudViewer(CameraWindow):
         self,
         pcd: pointcloud.PointCloud,
         retexture_callback: callable,
+        debug_callbacks: dict[callable],
         debug: bool = False,
         **kwargs
     ):
@@ -25,6 +26,7 @@ class PointCloudViewer(CameraWindow):
         # self.wnd.mouse_exclusivity = True
         self.pcd = pcd
         self._retexture_callback = retexture_callback
+        self._debug_callbacks = debug_callbacks
         self.debug = debug
         self.prog = self.load_program("point_color.glsl")
         self.fbo = None
@@ -46,7 +48,7 @@ class PointCloudViewer(CameraWindow):
             self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
         )
         screen_image = pcru.create_screen_image(
-            self.ctx.screen, self.wnd.width, self.wnd.height
+            self.ctx, self.wnd.width, self.wnd.height
         )
         depth_image = pcru.create_depth_image(
             self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
@@ -78,7 +80,7 @@ class PointCloudViewer(CameraWindow):
             )
 
         # Show the indices of the points
-        elif key == self.wnd.keys.I:
+        elif key == self.wnd.keys.I and self.debug:
             mvp = self.camera.projection.matrix * self.camera.matrix
             pcru.obtain_point_ids(
                 self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True
@@ -86,7 +88,7 @@ class PointCloudViewer(CameraWindow):
             self.prog = self.load_program("point_id.glsl")
 
         # Show the effect of the applied filters, red are the points that were removed
-        elif key == self.wnd.keys.F:
+        elif key == self.wnd.keys.F and self.debug:
             (
                 ids,
                 screen_image,
@@ -100,20 +102,16 @@ class PointCloudViewer(CameraWindow):
             )
             ids = pointcloud.flatten_and_filter(ids)
             ids_removed = pointcloud.flatten_and_filter(ids_removed)
-            self.pcd.flag(ids_removed)
-            self.pcd.filter(np.concatenate((ids, ids_removed)))
-        # Show the texture applied to the point cloud
-        elif key == self.wnd.keys.M:
-            result = Image.open("result.png")
-            ids = np.load("ids.npy")
-            self.pcd.retexture(result, ids)
-        # Show the texture applied to the point cloud without any other points
+            self._debug_callbacks["flag"](ids_removed)
+            self._debug_callbacks["filter"](np.concatenate((ids, ids_removed)))
+        elif key == self.wnd.keys.L:
+            self._debug_callbacks["load"]()
         elif key == self.wnd.keys.X:
-            result = Image.open("result.png")
-            ids = np.load("ids.npy")
-            self.pcd.retexture(result, ids)
-            ids = pointcloud.flatten_and_filter(ids)
-            self.pcd.filter(ids)
+            self._debug_callbacks["load"]()
+            self._debug_callbacks["exclusive_apply"]()
+        elif key == self.wnd.keys.N:
+            self.prog = self.load_program("point_color.glsl")
+            self._debug_callbacks["reset"]()
         elif key == self.wnd.keys.UP:
             self.pcd._point_size += 1.0
         elif key == self.wnd.keys.DOWN:

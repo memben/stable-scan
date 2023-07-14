@@ -7,7 +7,7 @@ from moderngl_window.timers.clock import Timer
 from PIL import Image
 
 from point_viewer import PointCloudViewer
-from pointcloud import PointCloud
+from pointcloud import SDPointCloud
 
 
 @dataclass
@@ -22,15 +22,29 @@ class ViewControl:
 
     def __init__(
         self,
-        pcd: PointCloud,
+        sd_pcd: SDPointCloud,
         width: int,
         height: int,
         retexture_callback: callable,
         debug: bool,
     ):
-        self.pcd = pcd
+        self.sd_pcd = sd_pcd
+        debug_callbacks = {
+            "flag": lambda ids: self.sd_pcd.flag(ids),
+            "filter": lambda ids: self.sd_pcd.filter(ids),
+            "load": lambda: print("load"),
+            "exclusive_apply": lambda: print("exclusive_apply"),
+            "save": lambda: print("save"),
+            "reset": lambda: self.sd_pcd.reset(),
+        }
+
         self.viewer = PointCloudViewer(
-            self.pcd, retexture_callback, title="StableScan", size=(width, height)
+            self.sd_pcd.pcd,
+            retexture_callback,
+            debug_callbacks,
+            title="StableScan",
+            size=(width, height),
+            debug=debug,
         )
 
     def run(self):

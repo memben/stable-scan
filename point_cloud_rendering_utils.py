@@ -83,8 +83,9 @@ def obtain_point_ids(
     return ids
 
 
-def create_screen_image(source: moderngl.Framebuffer, width: int, height: int) -> Image:
+def create_screen_image(ctx: moderngl.Framebuffer, width: int, height: int) -> Image:
     # Taken from the moderngl_window's screenshot function
+    source = ctx.screen
     mode = "RGB"
     alignment = 1
     image = Image.frombytes(

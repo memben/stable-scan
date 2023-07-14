@@ -54,9 +54,6 @@ def filter_ids(
     filter out ids that deviate too much from the filtered depth image."""
     ids_filtered = ids.copy()
     ids_removed = ids.copy()
-    if debug:
-        depth_filtered.show(title="Filtered Depth Image")
-        depth_unfiltered.show(title="Unfiltered Depth Image")
     depth_filtered = np.array(depth_filtered)
     depth_unfiltered = np.array(depth_unfiltered)
     filter_mask = np.zeros_like(depth_filtered, dtype=np.uint8)
