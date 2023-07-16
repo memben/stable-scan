@@ -67,10 +67,11 @@ class PointCloud:
 class SDPointCloud:
     """A point cloud wrapper that provides additional retexturing functionality for StableScan."""
 
-    def __init__(self, pcd: PointCloud) -> None:
+    def __init__(self, pcd: PointCloud, debug=False) -> None:
         self.original_points = pcd._points.copy()
         self.original_colors = pcd._colors.copy()
         self.pcd = pcd
+        self.debug = debug
         self.retextured_points = set()
 
     @property
@@ -87,6 +88,8 @@ class SDPointCloud:
             for x in range(texture.width):
                 id = ids[y, x]
                 if id == PointCloud.EMPTY:
+                    continue
+                if id in self.retextured_points:
                     continue
                 color = texture.getpixel((x, y))
                 color = np.array(color, dtype=np.float32) / 255.0
@@ -128,13 +131,25 @@ class SDPointCloud:
     def mask_retextured(self, ids: np.ndarray) -> np.ndarray:
         """Given a 2D ids array, mask seen ids with 1, and unseen ids with 0."""
         mask = np.zeros_like(ids, dtype=np.uint8)
+        debug = np.zeros((*ids.shape, 3), dtype=np.uint8)
+        mask_count = 0
         for x in range(ids.shape[1]):
             for y in range(ids.shape[0]):
                 id = ids[y, x]
                 if id == PointCloud.EMPTY:
+                    debug[y, x] = [0, 0, 0] 
+                    mask[y, x] = 1
                     continue
                 if id in self.retextured_points:
+                    debug[y, x] = [0, 255, 0]
+                    mask[y, x] = 0
+                    mask_count += 1
+                else: 
+                    debug[y, x] = [255, 0, 0]
                     mask[y, x] = 1
+        if self.debug:
+            print(f"Keeping the color of {mask_count} points.")    
+            Image.fromarray(debug, mode="RGB").show()
         return mask
         
 

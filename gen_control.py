@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 from PIL import Image
-
+import numpy as np
 
 @dataclass
 class SDParams:
@@ -10,6 +10,7 @@ class SDParams:
 
     prompt: str
     init_image: Image = None
+    mask: np.ndarray = None # set to 1 to keep pixels, 0 to discard
     negative_prompt: str = ""
     width: int = 512
     height: int = 512
