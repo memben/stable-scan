@@ -32,9 +32,9 @@ class ViewControl:
         debug_callbacks = {
             "flag": lambda ids: self.sd_pcd.flag(ids),
             "filter": lambda ids: self.sd_pcd.filter(ids),
-            "load": lambda: print("load"),
-            "exclusive_apply": lambda: print("exclusive_apply"),
-            "save": lambda: print("save"),
+            "load": lambda: self.sd_pcd.load("retexture"),
+            "exclusive_apply": lambda: self.sd_pcd.filter(self.sd_pcd.retextured_point_ids),
+            "save": lambda: self.sd_pcd.save("retexture"),
             "reset": lambda: self.sd_pcd.reset(),
         }
 

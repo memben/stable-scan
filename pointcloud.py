@@ -71,6 +71,11 @@ class SDPointCloud:
         self.original_points = pcd._points.copy()
         self.original_colors = pcd._colors.copy()
         self.pcd = pcd
+        self.retextured_points = set()
+
+    @property
+    def retextured_point_ids(self) -> np.ndarray:
+        return np.array(list(self.retextured_points))
 
     def retexture(self, texture: Image, ids: np.ndarray) -> None:
         """Given a texture and a 2D array of ids, retexture the point cloud."""
@@ -80,16 +85,17 @@ class SDPointCloud:
         retexture_colors = []
         for y in range(texture.height):
             for x in range(texture.width):
+                id = ids[y, x]
                 if id == PointCloud.EMPTY:
                     continue
                 color = texture.getpixel((x, y))
                 color = np.array(color, dtype=np.float32) / 255.0
-                id = ids[y, x]
                 retexture_ids.append(id)
-                retexture_colors.append(color)
+                retexture_colors.append(color)        
         retexture_ids = np.array(retexture_ids)
         retexture_colors = np.array(retexture_colors)
         self.pcd.set_color(retexture_ids, retexture_colors)
+        self.retextured_points.update(retexture_ids)
 
     def flag(self, ids: np.ndarray) -> None:
         """Flag all points with ids in the ids set."""
@@ -99,9 +105,38 @@ class SDPointCloud:
         """Discard all points except those with ids in the ids array."""
         self.pcd.filter(ids)
 
+    def save(self, filename: str) -> None:
+        """Save the change on the point cloud to two .npy files."""
+        ids = np.array(list(self.retextured_points))
+        colors = self.pcd._colors[ids]
+        np.save(filename + "_ids.npy", ids)
+        np.save(filename + "_colors.npy", colors)
+
+    def load(self, filename: str) -> None:
+        """Load two .npy files and retexture the point cloud."""
+        self.reset()
+        ids = np.load(filename + "_ids.npy")
+        colors = np.load(filename + "_colors.npy")
+        self.pcd.set_color(ids, colors)
+        self.retextured_points.update(ids)
+
     def reset(self) -> None:
         """Reset the point cloud to its original state."""
         self.pcd.set_pcd(self.original_points.copy(), self.original_colors.copy())
+        self.retextured_points.clear()
+
+    def mask_retextured(self, ids: np.ndarray) -> np.ndarray:
+        """Given a 2D ids array, mask seen ids with 1, and unseen ids with 0."""
+        mask = np.zeros_like(ids, dtype=np.uint8)
+        for x in range(ids.shape[1]):
+            for y in range(ids.shape[0]):
+                id = ids[y, x]
+                if id == PointCloud.EMPTY:
+                    continue
+                if id in self.retextured_points:
+                    mask[y, x] = 1
+        return mask
+        
 
 
 # TODO(memben): Slighly shifts the point cloud one pixel to the bottom and right.

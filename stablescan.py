@@ -63,6 +63,7 @@ class StableScanCLI:
         Extending the capabilities of the control mode.
         Press 'i' to show the indices of the points.
         Press 'f' to show the depth images, filtered and unfiltered, and the effect of the applied filters.
+        Press 'o' to save the current state of the point cloud.
         Press 'l' to load precomputed textures and apply it to the pointcloud.
         Press 'x' to show the texture applied to the point cloud without the untexured points.
         Press 'n' to reset the point cloud to its original state.
@@ -95,7 +96,7 @@ class StableScan:
         self.pcd = SDPointCloud(read_pcd(*filenames))
         self.default_prompt = None
 
-        def retexture(screen_capture: ScreenCapture, pcd: SDPointCloud):
+        def retexture(screen_capture: ScreenCapture):
             screen_capture.color_image.show()
             screen_capture.depth_image.show()
 
@@ -115,12 +116,15 @@ class StableScan:
                 SDParams(
                     prompt,
                     init_image=screen_capture.color_image,
+                    width=width,
+                    height=height,
+                    mask=self.pcd.mask_retextured(screen_capture.ids),
                     controlnet={"depth": screen_capture.depth_image},
                 ),
             )
 
-            pcd.retexture(img, screen_capture.ids)
             img.show()
+            self.pcd.retexture(img, screen_capture.ids)
 
         self.vc = ViewControl(self.pcd, width, height, retexture, debug)
         self.vc.run()

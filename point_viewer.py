@@ -76,7 +76,7 @@ class PointCloudViewer(CameraWindow):
             from view_control import ScreenCapture
 
             self._retexture_callback(
-                ScreenCapture(screen_image, depth_image, ids), self.pcd
+                ScreenCapture(screen_image, depth_image, ids)
             )
 
         # Show the indices of the points
@@ -104,10 +104,11 @@ class PointCloudViewer(CameraWindow):
             ids_removed = pointcloud.flatten_and_filter(ids_removed)
             self._debug_callbacks["flag"](ids_removed)
             self._debug_callbacks["filter"](np.concatenate((ids, ids_removed)))
+        elif key == self.wnd.keys.O:
+            self._debug_callbacks["save"]()
         elif key == self.wnd.keys.L:
             self._debug_callbacks["load"]()
         elif key == self.wnd.keys.X:
-            self._debug_callbacks["load"]()
             self._debug_callbacks["exclusive_apply"]()
         elif key == self.wnd.keys.N:
             self.prog = self.load_program("point_color.glsl")
