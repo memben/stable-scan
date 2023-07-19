@@ -62,7 +62,7 @@ def obtain_point_ids(
 
     program["mvp"].write(mvp.astype("f4").tobytes())
     # TODO(memben): Fix distorted point color for values > 1.0
-    program["point_size"].value = pcd._point_size
+    program["point_size"].value = 1.0
 
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
@@ -71,16 +71,54 @@ def obtain_point_ids(
         mode=moderngl.POINTS, vertices=pcd._points.shape[0]
     )
     ctx.finish()
-    if debug:
-        # Alpha channel cannot be displayed
-        Image.frombytes("RGB", fbo.size, fbo.read(), "raw", "RGB", 0, -1).show(
-            title="Point ID Capture"
-        )
     buffer = fbo.read(components=4, alignment=1)
     ids = buffer_to_id(buffer, width, height)
     # in OpenGL the origin is at the bottom left corner
     ids = np.flip(ids, axis=0)
+    if debug:
+        # Alpha channel cannot be displayed
+        img = Image.frombytes("RGB", fbo.size, fbo.read(), "raw", "RGB", 0, -1)
+        img.show("Point IDs")
+        img.save("point_ids.png")
+
+        print(f"Captured {len(np.unique(ids))} unique ids.")
     return ids
+
+
+def render_screen_image(
+    ctx: moderngl.Context,
+    pcd: pointcloud.PointCloud,
+    mvp: np.ndarray,
+    width: int,
+    height: int,
+    debug=False,
+) -> Image:
+    """Render the point cloud and return the screen image."""
+
+    program = get_program(ctx, "shaders/point_color.glsl")
+
+    ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+    ctx.enable(moderngl.DEPTH_TEST)
+    ctx.disable(moderngl.BLEND)
+    ctx.multisample = False
+
+    program["mvp"].write(mvp.astype("f4").tobytes())
+    program["point_size"].value = pcd._point_size
+    fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
+    fbo.use()
+    fbo.clear(1.0, 1.0, 1.0, 1.0)  # white background
+    pcd.get_va_from(ctx, program).render(
+        mode=moderngl.POINTS, vertices=pcd._points.shape[0]
+    )
+    ctx.finish()
+    img = Image.frombytes("RGB", fbo.size, fbo.read(), "raw", "RGB", 0, -1)
+
+    if debug:
+        img.show("Screen Image")
+
+    print(img.size)
+
+    return img
 
 
 def create_screen_image(ctx: moderngl.Framebuffer, width: int, height: int) -> Image:
@@ -98,7 +136,7 @@ def create_screen_image(ctx: moderngl.Framebuffer, width: int, height: int) -> I
     )
     image = image.transpose(Image.FLIP_TOP_BOTTOM)
     # custom downscale
-    image = image.resize((width, height), Image.BILINEAR)
+    # image = image.resize((width, height), Image.BILINEAR)
     return image
 
 

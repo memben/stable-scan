@@ -65,6 +65,7 @@ class StableScanCLI:
         Press 'f' to show the depth images, filtered and unfiltered, and the effect of the applied filters.
         Press 'o' to save the current state of the point cloud.
         Press 'l' to load precomputed textures and apply it to the pointcloud.
+        Press 'b' to show the points that have been retextured.
         Press 'x' to show the texture applied to the point cloud without the untexured points.
         Press 'n' to reset the point cloud to its original state.
 
@@ -93,13 +94,13 @@ class StableScan:
         height: int,
         debug: bool = False,
     ):
-        self.pcd = SDPointCloud(read_pcd(*filenames))
-        self.default_prompt = None
-
+        self.pcd = SDPointCloud(read_pcd(*filenames), debug=debug)
+        self.default_prompt = "A room"
+        
         def retexture(screen_capture: ScreenCapture):
             screen_capture.color_image.show()
             screen_capture.depth_image.show()
-
+            return
             response = input("Would you like to proceed? (Y/N): ").upper()
             if response == "N":
                 print("Cancelled")
@@ -111,14 +112,15 @@ class StableScan:
 
             print(f"Generating {prompt}...")
 
+            # TODO(memben): the mask works, however the non visiblity of the textured points make it useless
             img = generate(
                 webui_api,
                 SDParams(
                     prompt,
                     init_image=screen_capture.color_image,
-                    width=width,
-                    height=height,
-                    mask=self.pcd.mask_retextured(screen_capture.ids),
+                    width=screen_capture.width,
+                    height=screen_capture.height,
+                    mask=None,  # self.pcd.mask_retextured(screen_capture.ids), # TODO(memben): breaks if mask is completely white
                     controlnet={"depth": screen_capture.depth_image},
                 ),
             )

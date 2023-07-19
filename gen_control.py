@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from PIL import Image
 import numpy as np
+from PIL import Image
+
 
 @dataclass
 class SDParams:
@@ -10,7 +11,7 @@ class SDParams:
 
     prompt: str
     init_image: Image = None
-    mask: np.ndarray = None # set to 1 to keep pixels, 0 to discard
+    mask: np.ndarray = None  # set to 1 to keep pixels, 0 to discard
     negative_prompt: str = ""
     width: int = 512
     height: int = 512
@@ -19,7 +20,7 @@ class SDParams:
     controlnet: Optional[Dict] = None
 
 
-def generate(webui_url: str, params: SDParams) -> Image:
+async def generate(webui_url: str, params: SDParams) -> Image:
     """Generate an image using the webui api, uses init_image if provided"""
     import webui_api
 
@@ -32,8 +33,10 @@ def generate(webui_url: str, params: SDParams) -> Image:
     if params.controlnet is not None:
         payload = webui_api.inject_controlnet_payload(payload, params)
 
-    return (
-        webui_api.generate_img2img(webui_url, payload)
-        if use_img2img
-        else webui_api.generate_txt2img(webui_url, payload)
-    )
+    img = None
+    if use_img2img:
+        img = await webui_api.generate_img2img(webui_url, payload)
+    else:
+        img = await webui_api.generate_txt2img(webui_url, payload)
+
+    return img

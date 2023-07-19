@@ -14,6 +14,8 @@ from pointcloud import SDPointCloud
 class ScreenCapture:
     color_image: Image
     depth_image: Image
+    width: int
+    height: int
     ids: np.ndarray
 
 
@@ -33,9 +35,12 @@ class ViewControl:
             "flag": lambda ids: self.sd_pcd.flag(ids),
             "filter": lambda ids: self.sd_pcd.filter(ids),
             "load": lambda: self.sd_pcd.load("retexture"),
-            "exclusive_apply": lambda: self.sd_pcd.filter(self.sd_pcd.retextured_point_ids),
+            "exclusive_apply": lambda: self.sd_pcd.filter(
+                self.sd_pcd.retextured_point_ids
+            ),
             "save": lambda: self.sd_pcd.save("retexture"),
             "reset": lambda: self.sd_pcd.reset(),
+            "blend": lambda: self.sd_pcd.flag(self.sd_pcd.retextured_point_ids),
         }
 
         self.viewer = PointCloudViewer(

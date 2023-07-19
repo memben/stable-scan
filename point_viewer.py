@@ -31,10 +31,20 @@ class PointCloudViewer(CameraWindow):
         self.prog = self.load_program("point_color.glsl")
         self.fbo = None
 
+        self._buffer_width = self.ctx.viewport[2]
+        self._buffer_height = self.ctx.viewport[3]
+
+    # TODO(memben): figure out why it does not perfrom like point cloud renderer
     def render(self, time: float, frametime: float):
-        self.ctx.enable_only(
-            moderngl.CULL_FACE | moderngl.DEPTH_TEST | moderngl.PROGRAM_POINT_SIZE
-        )
+        self._buffer_width = self.ctx.viewport[2]
+        self._buffer_height = self.ctx.viewport[3]
+
+        self.ctx.clear(1.0, 1.0, 1.0, 1.0)
+        self.ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+        self.ctx.enable(moderngl.DEPTH_TEST)
+        self.ctx.disable(moderngl.BLEND)
+        self.ctx.multisample = False
+
         projection = self.camera.projection.matrix
         camera_matrix = self.camera.matrix
         mvp = projection * camera_matrix
@@ -42,19 +52,28 @@ class PointCloudViewer(CameraWindow):
         self.prog["point_size"].value = self.pcd._point_size
         self.pcd.get_vao().render(self.prog)
 
-    def _process_screen(self):
+    def _process_screen(self, debug=False):
+        width = self._buffer_width
+        height = self._buffer_height
+
         mvp = self.camera.projection.matrix * self.camera.matrix
-        ids = pcru.obtain_point_ids(
-            self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
+        ids = pcru.obtain_point_ids(self.ctx, self.pcd, mvp, width, height, debug=debug)
+        screen_image = pcru.create_screen_image(self.ctx, width, height)
+        screen_rend_image = pcru.render_screen_image(
+            self.ctx, self.pcd, mvp, width, height, debug=debug
         )
-        screen_image = pcru.create_screen_image(
-            self.ctx, self.wnd.width, self.wnd.height
-        )
+
         depth_image = pcru.create_depth_image(
-            self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height
+            self.ctx, self.pcd, mvp, width, height, debug=debug
         )
         depth_image_unfiltered = pcru.create_depth_image(
-            self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, filter=False
+            self.ctx,
+            self.pcd,
+            mvp,
+            width,
+            height,
+            filter=False,
+            debug=debug,
         )
         return ids, screen_image, depth_image, depth_image_unfiltered
 
@@ -70,21 +89,21 @@ class PointCloudViewer(CameraWindow):
                 screen_image,
                 depth_image,
                 depth_image_unfiltered,
-            ) = self._process_screen()
+            ) = self._process_screen(debug=self.debug)
+
             ids, _ = depth_utils.filter_ids(ids, depth_image, depth_image_unfiltered)
 
             from view_control import ScreenCapture
 
+            width, height = self._buffer_width, self._buffer_height
             self._retexture_callback(
-                ScreenCapture(screen_image, depth_image, ids)
+                ScreenCapture(screen_image, depth_image, width, height, ids)
             )
 
         # Show the indices of the points
         elif key == self.wnd.keys.I and self.debug:
             mvp = self.camera.projection.matrix * self.camera.matrix
-            pcru.obtain_point_ids(
-                self.ctx, self.pcd, mvp, self.wnd.width, self.wnd.height, debug=True
-            )
+            pcru.obtain_point_ids(self.ctx, self.pcd, mvp, width, height, debug=True)
             self.prog = self.load_program("point_id.glsl")
 
         # Show the effect of the applied filters, red are the points that were removed
@@ -113,6 +132,8 @@ class PointCloudViewer(CameraWindow):
         elif key == self.wnd.keys.N:
             self.prog = self.load_program("point_color.glsl")
             self._debug_callbacks["reset"]()
+        elif key == self.wnd.keys.B:
+            self._debug_callbacks["blend"]()
         elif key == self.wnd.keys.UP:
             self.pcd._point_size += 1.0
         elif key == self.wnd.keys.DOWN:

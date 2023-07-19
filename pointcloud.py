@@ -61,7 +61,6 @@ class PointCloud:
         self._points = self._points[u_ids]
         self._colors = self._colors[u_ids]
         self.vao = None
-        print(self.vao)
 
 
 class SDPointCloud:
@@ -94,11 +93,14 @@ class SDPointCloud:
                 color = texture.getpixel((x, y))
                 color = np.array(color, dtype=np.float32) / 255.0
                 retexture_ids.append(id)
-                retexture_colors.append(color)        
+                retexture_colors.append(color)
         retexture_ids = np.array(retexture_ids)
         retexture_colors = np.array(retexture_colors)
         self.pcd.set_color(retexture_ids, retexture_colors)
         self.retextured_points.update(retexture_ids)
+
+        if self.debug:
+            print(f"Retextured {len(retexture_ids)} points.")
 
     def flag(self, ids: np.ndarray) -> None:
         """Flag all points with ids in the ids set."""
@@ -137,21 +139,20 @@ class SDPointCloud:
             for y in range(ids.shape[0]):
                 id = ids[y, x]
                 if id == PointCloud.EMPTY:
-                    debug[y, x] = [0, 0, 0] 
+                    debug[y, x] = [0, 0, 0]
                     mask[y, x] = 1
                     continue
                 if id in self.retextured_points:
                     debug[y, x] = [0, 255, 0]
                     mask[y, x] = 0
                     mask_count += 1
-                else: 
+                else:
                     debug[y, x] = [255, 0, 0]
                     mask[y, x] = 1
         if self.debug:
-            print(f"Keeping the color of {mask_count} points.")    
+            print(f"Keeping the color of {mask_count} points.")
             Image.fromarray(debug, mode="RGB").show()
         return mask
-        
 
 
 # TODO(memben): Slighly shifts the point cloud one pixel to the bottom and right.

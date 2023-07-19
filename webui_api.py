@@ -1,19 +1,21 @@
 import base64
 import io
 
+import numpy as np
 import requests
 from PIL import Image
-import numpy as np
 
 from gen_control import SDParams
+
 
 def mask_to_base64(params: SDParams):
     # inpainting mask is black for pixels to keep, white for pixels to remove
     assert params.mask is not None
     assert params.mask.shape == (params.width, params.height)
-    mask = Image.fromarray(params.mask.astype(np.uint8) * 255, mode="L") 
+    mask = Image.fromarray(params.mask.astype(np.uint8) * 255, mode="L")
     mask.show()
     return encode_image_to_base64(mask)
+
 
 def encode_image_to_base64(image):
     image_byte_array = io.BytesIO()
@@ -21,6 +23,7 @@ def encode_image_to_base64(image):
     image_byte_array = image_byte_array.getvalue()
     encoded_image = base64.b64encode(image_byte_array).decode("utf-8")
     return encoded_image
+
 
 def txt2img_payload(params: SDParams):
     payload = {
@@ -76,14 +79,15 @@ def _decode_response(response):
     return image
 
 
-def generate_txt2img(url, payload):
-    response = requests.post(url=f"{url}/sdapi/v1/txt2img", json=payload)
+async def generate_txt2img(url, payload):
+    response = await requests.post(url=f"{url}/sdapi/v1/txt2img", json=payload)
     return _decode_response(response)
 
 
-def generate_img2img(url, payload):
-    response = requests.post(url=f"{url}/sdapi/v1/img2img", json=payload)
+async def generate_img2img(url, payload):
+    response = await requests.post(url=f"{url}/sdapi/v1/img2img", json=payload)
     return _decode_response(response)
+
 
 # Uuse python3 webui_api.py > payload.json && sed -i '' "s/'/\"/g" payload.json for debugging
 if __name__ == "__main__":
