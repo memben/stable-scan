@@ -7,6 +7,9 @@ from PIL import Image
 import depth_utils
 import pointcloud
 
+# POINT SIZE OPITMIZED FOR 512x512
+POINT_SIZE = 1.5
+
 
 def inject_definition(shader_code, injection):
     # "#version xxx" must be the first line
@@ -61,8 +64,8 @@ def obtain_point_ids(
     ctx.multisample = False
 
     program["mvp"].write(mvp.astype("f4").tobytes())
-    # TODO(memben): Fix distorted point color for values > 1.0
-    program["point_size"].value = 1.0
+    # NOTE(memben): distorted point color for values > 1.0 have been a problem in the past
+    program["point_size"].value = POINT_SIZE
 
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
@@ -85,7 +88,7 @@ def obtain_point_ids(
     return ids
 
 
-def render_screen_image(
+def render_pointcloud(
     ctx: moderngl.Context,
     pcd: pointcloud.PointCloud,
     mvp: np.ndarray,
@@ -103,7 +106,7 @@ def render_screen_image(
     ctx.multisample = False
 
     program["mvp"].write(mvp.astype("f4").tobytes())
-    program["point_size"].value = pcd._point_size
+    program["point_size"].value = POINT_SIZE
     fbo = ctx.framebuffer(ctx.renderbuffer((width, height)))
     fbo.use()
     fbo.clear(1.0, 1.0, 1.0, 1.0)  # white background
@@ -115,8 +118,6 @@ def render_screen_image(
 
     if debug:
         img.show("Screen Image")
-
-    print(img.size)
 
     return img
 
@@ -158,7 +159,7 @@ def create_depth_image(
     ctx.enable(moderngl.DEPTH_TEST)
 
     program["mvp"].write(mvp.astype("f4").tobytes())
-    program["point_size"].value = pcd._point_size
+    program["point_size"].value = POINT_SIZE
 
     tex_depth = ctx.depth_texture(
         (width, height)

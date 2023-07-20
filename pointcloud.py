@@ -16,16 +16,17 @@ class PointCloud:
         if colors is None:
             colors = np.random.rand(points.shape[0], 3).astype(np.float32)
         self._colors = colors
-        self.vao = None
+        self._vao = None
 
     @property
     def point_size(self) -> float:
         return self._point_size
 
-    def get_vao(self) -> VAO:
-        if self.vao is None:
-            self.vao = self._create_pc()
-        return self.vao
+    @property
+    def vao(self) -> VAO:
+        if self._vao is None:
+            self._vao = self._create_pc()
+        return self._vao
 
     def get_va_from(
         self, ctx: moderngl.Context, program: moderngl.Program
@@ -39,28 +40,28 @@ class PointCloud:
         return va
 
     def _create_pc(self) -> VAO:
-        vao = VAO(mode=moderngl.POINTS)
+        _vao = VAO(mode=moderngl.POINTS)
         vbo = self._points.astype("f4").tobytes()
-        vao.buffer(vbo, "3f", "in_position")
+        _vao.buffer(vbo, "3f", "in_position")
         vbo = self._colors.astype("f4").tobytes()
-        vao.buffer(vbo, "3f", "in_color")
-        return vao
+        _vao.buffer(vbo, "3f", "in_color")
+        return _vao
 
     def set_color(self, ids: np.array, colors: np.array) -> None:
         """Set the color of all points with ids in the ids set."""
         self._colors[ids] = colors
-        self.vao = None
+        self._vao = None
 
     def set_pcd(self, points: np.ndarray, colors: np.ndarray):
         self._points = normalize(points)
         self._colors = colors
-        self.vao = None
+        self._vao = None
 
     def filter(self, u_ids: np.array) -> None:
         """Discard all points except those with ids in the ids array."""
         self._points = self._points[u_ids]
         self._colors = self._colors[u_ids]
-        self.vao = None
+        self._vao = None
 
 
 class SDPointCloud:
@@ -149,9 +150,22 @@ class SDPointCloud:
                 else:
                     debug[y, x] = [255, 0, 0]
                     mask[y, x] = 1
+
         if self.debug:
             print(f"Keeping the color of {mask_count} points.")
             Image.fromarray(debug, mode="RGB").show()
+
+        mask_ratio = mask_count / (ids.shape[0] * ids.shape[1])
+
+        # TODO(memben): breaks if mask is completely white
+        if mask_ratio < 0.02:
+            print(f"Warning: Mask ratio is {mask_ratio}.")
+            print(
+                "To ensure consistent retexturing, use an area with more retexured points."
+            )
+            print("Proceeding without a mask.")
+            mask = None
+
         return mask
 
 

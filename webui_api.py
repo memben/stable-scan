@@ -13,6 +13,9 @@ def mask_to_base64(params: SDParams):
     assert params.mask is not None
     assert params.mask.shape == (params.width, params.height)
     mask = Image.fromarray(params.mask.astype(np.uint8) * 255, mode="L")
+
+    mask.putpixel((0, 0), 0)
+
     mask.show()
     return encode_image_to_base64(mask)
 
@@ -79,13 +82,13 @@ def _decode_response(response):
     return image
 
 
-async def generate_txt2img(url, payload):
-    response = await requests.post(url=f"{url}/sdapi/v1/txt2img", json=payload)
+def generate_txt2img(url, payload):
+    response = requests.post(url=f"{url}/sdapi/v1/txt2img", json=payload)
     return _decode_response(response)
 
 
-async def generate_img2img(url, payload):
-    response = await requests.post(url=f"{url}/sdapi/v1/img2img", json=payload)
+def generate_img2img(url, payload):
+    response = requests.post(url=f"{url}/sdapi/v1/img2img", json=payload)
     return _decode_response(response)
 
 

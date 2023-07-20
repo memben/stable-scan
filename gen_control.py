@@ -20,7 +20,7 @@ class SDParams:
     controlnet: Optional[Dict] = None
 
 
-async def generate(webui_url: str, params: SDParams) -> Image:
+def generate(webui_url: str, params: SDParams) -> Image:
     """Generate an image using the webui api, uses init_image if provided"""
     import webui_api
 
@@ -35,8 +35,8 @@ async def generate(webui_url: str, params: SDParams) -> Image:
 
     img = None
     if use_img2img:
-        img = await webui_api.generate_img2img(webui_url, payload)
+        img = webui_api.generate_img2img(webui_url, payload)
     else:
-        img = await webui_api.generate_txt2img(webui_url, payload)
+        img = webui_api.generate_txt2img(webui_url, payload)
 
     return img

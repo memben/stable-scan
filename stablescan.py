@@ -96,13 +96,13 @@ class StableScan:
     ):
         self.pcd = SDPointCloud(read_pcd(*filenames), debug=debug)
         self.default_prompt = "A room"
-        
+
         def retexture(screen_capture: ScreenCapture):
             screen_capture.color_image.show()
             screen_capture.depth_image.show()
-            return
+
             response = input("Would you like to proceed? (Y/N): ").upper()
-            if response == "N":
+            if response != "Y":
                 print("Cancelled")
                 return
 
@@ -112,7 +112,6 @@ class StableScan:
 
             print(f"Generating {prompt}...")
 
-            # TODO(memben): the mask works, however the non visiblity of the textured points make it useless
             img = generate(
                 webui_api,
                 SDParams(
@@ -120,7 +119,7 @@ class StableScan:
                     init_image=screen_capture.color_image,
                     width=screen_capture.width,
                     height=screen_capture.height,
-                    mask=None,  # self.pcd.mask_retextured(screen_capture.ids), # TODO(memben): breaks if mask is completely white
+                    mask=self.pcd.mask_retextured(screen_capture.ids),
                     controlnet={"depth": screen_capture.depth_image},
                 ),
             )
@@ -128,7 +127,15 @@ class StableScan:
             img.show()
             self.pcd.retexture(img, screen_capture.ids)
 
-        self.vc = ViewControl(self.pcd, width, height, retexture, debug)
+        self.vc = ViewControl(
+            self.pcd,
+            width,
+            height,
+            retexture,
+            retexture_width=WINDOW_WIDTH,
+            retexture_height=WINDOW_HEIGHT,
+            debug=debug,
+        )
         self.vc.run()
 
 
