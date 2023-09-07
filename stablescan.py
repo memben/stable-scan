@@ -9,7 +9,6 @@ from view_control import ScreenCapture, ViewControl
 WINDOW_WIDTH = 512
 WINDOW_HEIGHT = 512
 
-
 class StableScanCLI:
     def run(
         self,
@@ -95,9 +94,9 @@ class StableScan:
         debug: bool = False,
     ):
         self.pcd = SDPointCloud(read_pcd(*filenames), debug=debug)
-        self.default_prompt = "A room"
+        self.default_prompt = None
 
-        def retexture(screen_capture: ScreenCapture):
+        def retexture_callback(screen_capture: ScreenCapture):
             screen_capture.color_image.show()
             screen_capture.depth_image.show()
 
@@ -131,7 +130,7 @@ class StableScan:
             self.pcd,
             width,
             height,
-            retexture,
+            retexture_callback,
             retexture_width=WINDOW_WIDTH,
             retexture_height=WINDOW_HEIGHT,
             debug=debug,
