@@ -4,16 +4,6 @@
 
 Stable-Scan leverages the power of Stable Diffusion to enrich your 3D Point Clouds with new textures.
 
-## Table of Contents
-
-- [Installation](#installation)
-  - [Clone Repository](#clone-repository)
-  - [Environment Setup](#environment-setup)
-  - [LAS File Creation](#las-file-creation)
-  - [Stable Diffusion API Setup](#stable-diffusion-api-setup)
-- [Usage](#usage)
-- [Known Issues](#known-issues)
-
 ## Installation
 
 ### Clone Repository
@@ -26,11 +16,27 @@ git clone https://github.com/memben/stable-scan.git
 
 ### Environment Setup
 
-Set up a virtual environment and install required packages. (Note: Detailed instructions are coming soon.)
+1. **Create a Virtual Environment**: Navigate to the project directory and create a virtual environment.
 
-```bash
-# TODO: Instructions for setting up the .venv and installing requirements
-```
+    ```bash
+    cd stable-scan
+    python3 -m venv .venv  # On Linux or macOS
+    py -m venv .venv  # On Windows
+    ```
+
+2. **Activate the Virtual Environment**:
+
+    ```bash
+    source .venv/bin/activate  # On Linux or macOS
+    .\.venv\Scripts\Activate  # On Windows
+    ```
+
+3. **Install Required Packages**: Install all the dependencies listed in the `requirements.txt` file.
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
 
 ### LAS File Creation
 
