@@ -92,9 +92,10 @@ python stablescan.py debug path/to/file.las --webui-api SERVER_URL
 
 ## Known Issues
 
-- Projection into the point cloud has some known limitations ([See Issue](#TODO-LINK)).
-- Style transfer is currently problematic ([See Issue](#TODO-LINK)).
+- Style transfer is currently problematic ([See Issue](https://github.com/memben/stable-scan/issues/1)).
+- Projection into the point cloud has some known limitations ([See Issue](https://github.com/memben/stable-scan/issues/2)).
 
-For more information and updates, visit the [Issues section](#TODO-LINK).
+
+For more information and updates, visit the [Issues section](https://github.com/memben/stable-scan/issues).
 
 We hope you find Stable-Scan useful for your 3D Point Cloud texturing needs! Feel free to contribute and report issues.
