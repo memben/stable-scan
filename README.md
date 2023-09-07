@@ -105,3 +105,11 @@ python stablescan.py debug path/to/file.las --webui-api SERVER_URL
 For more information and updates, visit the [Issues section](https://github.com/memben/stable-scan/issues).
 
 We hope you find Stable-Scan useful for your 3D Point Cloud texturing needs! Feel free to contribute and report issues.
+
+## How it is build
+
+For the retexturing we use StableDiffusion + ControlNet, using the depth model we can create fitting textures for a scene and project them into the point cloud. 
+The concept looks like this:
+<img width="1432" alt="image" src="https://github.com/memben/stable-scan/assets/59774249/6deb29c5-7d7e-4baa-b590-cc2efecef1bf">
+
+
